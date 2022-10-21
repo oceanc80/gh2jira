@@ -89,7 +89,7 @@ Flags:
       --github-project string   Github project to clone from e.g. ORG/REPO (default "operator-framework/operator-sdk")
   -h, --help                    help for clone
       --project string          Jira project to clone to (default "OSDK")
-      --token-file string   file containing github and jira tokens (default "tokens.yaml")
+      --token-file string       file containing github and jira tokens (default "tokens.yaml")
 ```
 
 [actions-img]: https://github.com/jmrodri/gh2jira/workflows/unit/badge.svg
