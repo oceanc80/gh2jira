@@ -33,37 +33,7 @@ var _ = Describe("Cloner", func() {
 
 	// Test out the ClonerConfig struct and its methods
 	Context("ClonerConfig", func() {
-		Describe("getToken", func() {
-			var (
-				options       ClonerConfig
-				originalToken string
-			)
-			BeforeEach(func() {
-				options = ClonerConfig{}
-			})
-			BeforeEach(func() {
-				originalToken = os.Getenv("JIRA_TOKEN")
-				err := os.Setenv("JIRA_TOKEN", "blah-blah-blah")
-				Expect(err).NotTo(HaveOccurred())
-			})
-			AfterEach(func() {
-				err := os.Setenv("JIRA_TOKEN", originalToken)
-				Expect(err).NotTo(HaveOccurred())
-			})
-			It("should return the token", func() {
-				token, err := options.getToken()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(token).To(Equal("blah-blah-blah"))
-			})
-			It("should return an error if no token", func() {
-				err := os.Unsetenv("JIRA_TOKEN")
-				Expect(err).NotTo(HaveOccurred())
 
-				token, err := options.getToken()
-				Expect(err).To(HaveOccurred())
-				Expect(token).To(Equal(""))
-			})
-		})
 	})
 
 	Context("With Option methods", func() {

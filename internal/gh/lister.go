@@ -16,9 +16,8 @@ package gh
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/google/go-github/v47/github"
@@ -30,6 +29,7 @@ type Option func(*ListerConfig) error
 type ListerConfig struct {
 	client    *http.Client
 	Milestone string
+	Token     string
 	Assignee  string
 	Project   string
 	Label     []string
@@ -38,12 +38,11 @@ type ListerConfig struct {
 func (c *ListerConfig) setDefaults() error {
 	if c.client == nil {
 		ctx := context.Background()
-		token, err := c.getToken()
-		if err != nil {
-			return err
+		if c.Token == "" {
+			return errors.New("cannot create github client without a token")
 		}
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: token},
+			&oauth2.Token{AccessToken: c.Token},
 		)
 		c.client = oauth2.NewClient(ctx, ts)
 	}
@@ -62,17 +61,16 @@ func (l *ListerConfig) GetGithubRepo() string {
 	return s[1]
 }
 
-func (c *ListerConfig) getToken() (string, error) {
-	token, ok := os.LookupEnv("GITHUB_TOKEN")
-	if !ok {
-		return "", fmt.Errorf("please supply your GITHUB_TOKEN")
-	}
-	return token, nil
-}
-
 func WithClient(cl *http.Client) Option {
 	return func(c *ListerConfig) error {
 		c.client = cl
+		return nil
+	}
+}
+
+func WithToken(token string) Option {
+	return func(c *ListerConfig) error {
+		c.Token = token
 		return nil
 	}
 }

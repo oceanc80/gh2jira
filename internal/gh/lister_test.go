@@ -77,37 +77,6 @@ var _ = Describe("Lister", func() {
 				Expect(options.GetGithubRepo()).To(Equal("operator-framework"))
 			})
 		})
-		Describe("getToken", func() {
-			var (
-				options       ListerConfig
-				originalToken string
-			)
-			BeforeEach(func() {
-				options = ListerConfig{}
-			})
-			BeforeEach(func() {
-				originalToken = os.Getenv("GITHUB_TOKEN")
-				err := os.Setenv("GITHUB_TOKEN", "blah-blah-blah")
-				Expect(err).NotTo(HaveOccurred())
-			})
-			AfterEach(func() {
-				err := os.Setenv("GITHUB_TOKEN", originalToken)
-				Expect(err).NotTo(HaveOccurred())
-			})
-			It("should return the token", func() {
-				token, err := options.getToken()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(token).To(Equal("blah-blah-blah"))
-			})
-			It("should return an error if no token", func() {
-				err := os.Unsetenv("GITHUB_TOKEN")
-				Expect(err).NotTo(HaveOccurred())
-
-				token, err := options.getToken()
-				Expect(err).To(HaveOccurred())
-				Expect(token).To(Equal(""))
-			})
-		})
 	})
 
 	Context("With Option methods", func() {
@@ -130,6 +99,14 @@ var _ = Describe("Lister", func() {
 				err := opt(&options)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(options.client).To(Equal(mc))
+			})
+		})
+		Describe("WithToken", func() {
+			It("should set provided token", func() {
+				opt := WithToken("i'm a token!")
+				err := opt(&options)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(options.Token).To(Equal("i'm a token!"))
 			})
 		})
 		Describe("WithMilestone", func() {

@@ -33,6 +33,13 @@ Flags:
 Use "gh2jira [command] --help" for more information about a command.
 ```
 
+Both commands require a token file containing tokens for both GitHub and Jira. Example `tokens.yaml` file:
+
+```yaml
+githubToken: foo
+jiraToken: bar
+```
+
 ### `list` subcommand
 
 The `list` subcommand will display all open github issues of the given project.
@@ -59,6 +66,7 @@ Flags:
       --label strings      label i.e. --label "documentation,bug" or --label doc --label bug
       --milestone string   the milestone ID from the url, not the display name
       --project string     Github project to list e.g. ORG/REPO (default "operator-framework/operator-sdk")
+      --token-file string  file containing github and jira tokens (default "tokens.yaml")
 ```
 
 ### `clone` subcommand
@@ -81,6 +89,7 @@ Flags:
       --github-project string   Github project to clone from e.g. ORG/REPO (default "operator-framework/operator-sdk")
   -h, --help                    help for clone
       --project string          Jira project to clone to (default "OSDK")
+      --token-file string   file containing github and jira tokens (default "tokens.yaml")
 ```
 
 [actions-img]: https://github.com/jmrodri/gh2jira/workflows/unit/badge.svg
