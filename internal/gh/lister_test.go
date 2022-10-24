@@ -144,7 +144,6 @@ var _ = Describe("Lister", func() {
 	})
 
 	Describe("ListIssues", func() {
-		var ()
 		It("should return an error if there is no token", func() {
 			iss, err := ListIssues()
 			Expect(iss).To(BeNil())
