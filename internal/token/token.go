@@ -43,10 +43,7 @@ func ReadTokensYaml(file string) (*Tokens, error) {
 	return &tokens, nil
 }
 
+// overrideable func for mocking os.ReadFile
 var readFile = func(file string) ([]byte, error) {
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
+	return os.ReadFile(file)
 }

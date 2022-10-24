@@ -17,7 +17,6 @@ package gh
 import (
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/google/go-github/v47/github"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
@@ -145,25 +144,12 @@ var _ = Describe("Lister", func() {
 	})
 
 	Describe("ListIssues", func() {
-		var (
-			originalToken string
-		)
-		BeforeEach(func() {
-			originalToken = os.Getenv("GITHUB_TOKEN")
-			err := os.Setenv("GITHUB_TOKEN", "blah-blah-blah")
-			Expect(err).NotTo(HaveOccurred())
-		})
-		AfterEach(func() {
-			err := os.Setenv("GITHUB_TOKEN", originalToken)
-			Expect(err).NotTo(HaveOccurred())
-		})
+		var ()
 		It("should return an error if there is no token", func() {
-			err := os.Unsetenv("GITHUB_TOKEN")
-			Expect(err).NotTo(HaveOccurred())
-
 			iss, err := ListIssues()
 			Expect(iss).To(BeNil())
 			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot create github client without a token"))
 		})
 		It("should find open issues", func() {
 			mockedHTTPClient := mock.NewMockedHTTPClient(
@@ -215,25 +201,11 @@ var _ = Describe("Lister", func() {
 		})
 	})
 	Describe("GetIssue", func() {
-		var (
-			originalToken string
-		)
-		BeforeEach(func() {
-			originalToken = os.Getenv("GITHUB_TOKEN")
-			err := os.Setenv("GITHUB_TOKEN", "blah-blah-blah")
-			Expect(err).NotTo(HaveOccurred())
-		})
-		AfterEach(func() {
-			err := os.Setenv("GITHUB_TOKEN", originalToken)
-			Expect(err).NotTo(HaveOccurred())
-		})
 		It("should return an error if there is no token", func() {
-			err := os.Unsetenv("GITHUB_TOKEN")
-			Expect(err).NotTo(HaveOccurred())
-
 			iss, err := GetIssue(10)
 			Expect(iss).To(BeNil())
 			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot create github client without a token"))
 		})
 		It("should return error if Options return an error", func() {
 			_, err := GetIssue(10, func(c *ListerConfig) error {
