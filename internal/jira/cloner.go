@@ -145,6 +145,7 @@ func Clone(issue *github.Issue, opts ...Option) (*gojira.Issue, error) {
 		var err error
 		daIssue, _, err = jiraClient.Issue.Create(&ji)
 		if err != nil {
+			fmt.Printf("Error cloning issue: %v", err)
 			return daIssue, err
 		}
 
