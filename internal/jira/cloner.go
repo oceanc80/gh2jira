@@ -15,9 +15,9 @@
 package jira
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	gojira "github.com/andygrunwald/go-jira"
@@ -28,6 +28,7 @@ type Option func(*ClonerConfig) error
 
 type ClonerConfig struct {
 	client  *http.Client
+	token   string
 	dryRun  bool
 	project string
 	jiraURL string
@@ -35,13 +36,11 @@ type ClonerConfig struct {
 
 func (c *ClonerConfig) setDefaults() error {
 	if c.client == nil {
-		token, err := c.getToken()
-		if err != nil {
-			return err
+		if c.token == "" {
+			return errors.New("cannot create jira client without a token")
 		}
-
 		tp := gojira.BearerAuthTransport{
-			Token: token,
+			Token: c.token,
 		}
 		c.client = tp.Client()
 	}
@@ -51,17 +50,16 @@ func (c *ClonerConfig) setDefaults() error {
 	return nil
 }
 
-func (c *ClonerConfig) getToken() (string, error) {
-	token, ok := os.LookupEnv("JIRA_TOKEN")
-	if !ok {
-		return "", fmt.Errorf("please supply your JIRA_TOKEN")
-	}
-	return token, nil
-}
-
 func WithClient(cl *http.Client) Option {
 	return func(c *ClonerConfig) error {
 		c.client = cl
+		return nil
+	}
+}
+
+func WithToken(token string) Option {
+	return func(c *ClonerConfig) error {
+		c.token = token
 		return nil
 	}
 }

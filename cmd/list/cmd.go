@@ -18,9 +18,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jmrodri/gh2jira/internal/gh"
+	"github.com/jmrodri/gh2jira/internal/token"
 )
 
 var (
+	tokenFile string
 	milestone string
 	assignee  string
 	project   string
@@ -33,7 +35,12 @@ func NewCmd() *cobra.Command {
 		Short: "List Github issues",
 		Long:  "List Github issues filtered by milestone, assignee, or label",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			issues, err := gh.ListIssues(gh.WithMilestone(milestone),
+			tokens, err := token.ReadTokensYaml(tokenFile)
+			if err != nil {
+				return err
+			}
+			issues, err := gh.ListIssues(gh.WithToken(tokens.GithubToken),
+				gh.WithMilestone(milestone),
 				gh.WithAssignee(assignee),
 				gh.WithProject(project),
 				gh.WithLabel(label),
@@ -54,6 +61,8 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&tokenFile, "token-file", "tokens.yaml",
+		"file containing github and jira tokens")
 	cmd.Flags().StringVar(&milestone, "milestone", "",
 		"the milestone ID from the url, not the display name")
 	cmd.Flags().StringVar(&assignee, "assignee", "", "username of the issue is assigned")
