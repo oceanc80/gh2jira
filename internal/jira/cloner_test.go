@@ -33,37 +33,7 @@ var _ = Describe("Cloner", func() {
 
 	// Test out the ClonerConfig struct and its methods
 	Context("ClonerConfig", func() {
-		Describe("getToken", func() {
-			var (
-				options       ClonerConfig
-				originalToken string
-			)
-			BeforeEach(func() {
-				options = ClonerConfig{}
-			})
-			BeforeEach(func() {
-				originalToken = os.Getenv("JIRA_TOKEN")
-				err := os.Setenv("JIRA_TOKEN", "blah-blah-blah")
-				Expect(err).NotTo(HaveOccurred())
-			})
-			AfterEach(func() {
-				err := os.Setenv("JIRA_TOKEN", originalToken)
-				Expect(err).NotTo(HaveOccurred())
-			})
-			It("should return the token", func() {
-				token, err := options.getToken()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(token).To(Equal("blah-blah-blah"))
-			})
-			It("should return an error if no token", func() {
-				err := os.Unsetenv("JIRA_TOKEN")
-				Expect(err).NotTo(HaveOccurred())
 
-				token, err := options.getToken()
-				Expect(err).To(HaveOccurred())
-				Expect(token).To(Equal(""))
-			})
-		})
 	})
 
 	Context("With Option methods", func() {
@@ -86,6 +56,14 @@ var _ = Describe("Cloner", func() {
 				err := opt(&options)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(options.client).To(Equal(mc))
+			})
+		})
+		Describe("WithToken", func() {
+			It("should set token with provided content", func() {
+				opt := WithToken("i'm a token!")
+				err := opt(&options)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(options.token).To(Equal("i'm a token!"))
 			})
 		})
 		Describe("WithDryRun", func() {
@@ -142,24 +120,10 @@ var _ = Describe("Cloner", func() {
 	})
 
 	Describe("Clone", func() {
-		var (
-			originalToken string
-		)
-		BeforeEach(func() {
-			originalToken = os.Getenv("JIRA_TOKEN")
-			err := os.Setenv("JIRA_TOKEN", "blah-blah-blah")
-			Expect(err).NotTo(HaveOccurred())
-		})
-		AfterEach(func() {
-			err := os.Setenv("JIRA_TOKEN", originalToken)
-			Expect(err).NotTo(HaveOccurred())
-		})
 		It("shoud return an error if there is no token", func() {
-			err := os.Unsetenv("JIRA_TOKEN")
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = Clone(nil)
+			_, err := Clone(nil)
 			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot create jira client without a token"))
 		})
 		It("should print out issue when dryRun is true", func() {
 			mockedHTTPClient := jmock.NewMockedHTTPClient(

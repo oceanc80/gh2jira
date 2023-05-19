@@ -40,10 +40,10 @@ func PrintGithubIssue(issue *github.Issue, oneline bool, color bool) {
 
 	if oneline {
 		if color {
-			// print the idea in yellow, then reset the rest of the line
-			fmt.Printf("\033[33m%5d\033[0m \033[32m%s\033[0m %s\n", issue.GetNumber(), issue.GetState(), issue.GetTitle())
+			// print the id in yellow, then reset the rest of the line
+			fmt.Printf("\033[33m%5d\033[0m \033[32m%s\033[31m %s\033[0m %s\n", issue.GetNumber(), issue.GetState(), *issue.GetAssignee().Login, issue.GetTitle())
 		} else {
-			fmt.Printf("%5d %s %s\n", issue.GetNumber(), issue.GetState(), issue.GetTitle())
+			fmt.Printf("%5d %s %s %s\n", issue.GetNumber(), issue.GetState(), *issue.GetAssignee().Login, issue.GetTitle())
 		}
 	} else {
 		// fmt.Println(*issue.ID)

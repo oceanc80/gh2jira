@@ -9,6 +9,26 @@ Code coverage:
 
 A utility that allows you to copy a Github issue to Jira
 
+## Getting Started
+The gh2jira utility expects the following environment variables to be set: `GITHUB_TOKEN` and `JIRA_TOKEN`.
+
+### Setting Up Github Token
+1. Follow the instructions [here](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-personal-access-token-classic) to create a personal access token, being sure to only limit the scope of the token to "public_repo" and "read:project".
+2. Copy the token created above and use it to set the `GITHUB_TOKEN` environment variable:
+```
+export GITHUB_TOKEN=<Copied Token>
+```
+
+### Setting Up Jira Token
+1. Follow the instructions [here](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/#Create-an-API-token) to set up an API token.
+2. Copy the token created above and use it to set the `JIRA_TOKEN` environment variable:
+```
+export JIRA_TOKEN=<Copied Token>
+```
+
+### Build the Utility
+Run `go build` from the root of the directory.
+
 ## Usage
 There are 2 main subcommands `list` & `clone`. The `list` subcommand will
 display all open github issues of the given project. The `clone` subcommand will
@@ -31,6 +51,13 @@ Flags:
   -h, --help   help for gh2jira
 
 Use "gh2jira [command] --help" for more information about a command.
+```
+
+Both commands require a token file containing tokens for both GitHub and Jira. Example `tokens.yaml` file:
+
+```yaml
+githubToken: foo
+jiraToken: bar
 ```
 
 ### `list` subcommand
@@ -59,6 +86,7 @@ Flags:
       --label strings      label i.e. --label "documentation,bug" or --label doc --label bug
       --milestone string   the milestone ID from the url, not the display name
       --project string     Github project to list e.g. ORG/REPO (default "operator-framework/operator-sdk")
+      --token-file string  file containing github and jira tokens (default "tokens.yaml")
 ```
 
 ### `clone` subcommand
@@ -81,6 +109,7 @@ Flags:
       --github-project string   Github project to clone from e.g. ORG/REPO (default "operator-framework/operator-sdk")
   -h, --help                    help for clone
       --project string          Jira project to clone to (default "OSDK")
+      --token-file string       file containing github and jira tokens (default "tokens.yaml")
 ```
 
 [actions-img]: https://github.com/jmrodri/gh2jira/workflows/unit/badge.svg
