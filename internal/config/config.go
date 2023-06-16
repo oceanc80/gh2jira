@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package token
+package config
 
 import (
 	"errors"
@@ -19,28 +19,33 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Tokens struct {
-	GithubToken string `yaml:"githubToken"`
-	JiraToken   string `yaml:"jiraToken"`
+type Config struct {
+	JiraBaseURL string `yaml:"jiraBaseURL"`
+	AuthTokens  struct {
+		JiraToken   string `yaml:"jira"`
+		GithubToken string `yaml:"github"`
+	} `yaml:"authTokens"`
 }
 
-func ReadTokensYaml(file string) (*Tokens, error) {
+func ReadConfigYaml(file string) (*Config, error) {
 	data, err := readFile(file)
 	if err != nil {
 		return nil, err
 	}
 
-	var tokens Tokens
-	err = yaml.Unmarshal([]byte(data), &tokens)
+	var config Config
+	err = yaml.Unmarshal([]byte(data), &config)
 	if err != nil {
 		return nil, err
-	} else if tokens.GithubToken == "" {
+	} else if config.JiraBaseURL == "" {
+		return nil, errors.New("missing required jira base url")
+	} else if config.AuthTokens.GithubToken == "" {
 		return nil, errors.New("missing required github token")
-	} else if tokens.JiraToken == "" {
+	} else if config.AuthTokens.JiraToken == "" {
 		return nil, errors.New("missing required jira token")
 	}
 
-	return &tokens, nil
+	return &config, nil
 }
 
 // overrideable func for mocking os.ReadFile

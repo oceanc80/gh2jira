@@ -19,16 +19,15 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/jmrodri/gh2jira/internal/config"
 	"github.com/jmrodri/gh2jira/internal/gh"
 	"github.com/jmrodri/gh2jira/internal/jira"
-	"github.com/jmrodri/gh2jira/internal/token"
 )
 
 var (
 	dryRun     bool
 	project    string
 	ghproject  string
-	tokenFile  string
 	configFile string
 )
 
@@ -40,28 +39,24 @@ func NewCmd() *cobra.Command {
 WARNING! This will write to your jira instance. Use --dryrun to see what will happen`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tokens, err := token.ReadTokensYaml(tokenFile)
-			if err != nil {
-				return err
-			}
-			jiraCfg, err := jira.LoadConfig(configFile)
+			configs, err := config.ReadConfigYaml(configFile)
 			if err != nil {
 				return err
 			}
 			for _, id := range args {
 				issueId, _ := strconv.Atoi(id)
 				issue, err := gh.GetIssue(issueId,
-					gh.WithToken(tokens.GithubToken),
+					gh.WithToken(configs.AuthTokens.GithubToken),
 					gh.WithProject(ghproject),
 				)
 				if err != nil {
 					return err
 				}
 				_, err = jira.Clone(issue,
-					jira.WithToken(tokens.JiraToken),
+					jira.WithToken(configs.AuthTokens.JiraToken),
 					jira.WithProject(project),
 					jira.WithDryRun(dryRun),
-					jira.WithJiraURL(jiraCfg.JiraBaseURL),
+					jira.WithJiraBaseURL(configs.JiraBaseURL),
 				)
 				if err != nil {
 					return nil
@@ -71,9 +66,8 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 		},
 	}
 
-	cmd.Flags().StringVar(&configFile, "config", "jiraConfig.yaml", "Jira config file")
-	cmd.Flags().StringVar(&tokenFile, "token-file", "tokens.yaml",
-		"file containing github and jira tokens")
+	cmd.Flags().StringVar(&configFile, "config-file", "config.yaml",
+		"file containing jira base url and github and jira tokens")
 	cmd.Flags().BoolVar(&dryRun, "dryrun", false, "display what we would do without cloning")
 	cmd.Flags().StringVar(&project, "project", "OSDK", "Jira project to clone to")
 	cmd.Flags().StringVar(&ghproject, "github-project", "operator-framework/operator-sdk",
