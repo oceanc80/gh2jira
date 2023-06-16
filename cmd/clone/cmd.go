@@ -25,21 +25,26 @@ import (
 )
 
 var (
-	dryRun    bool
-	project   string
-	ghproject string
-	tokenFile string
+	dryRun     bool
+	project    string
+	ghproject  string
+	tokenFile  string
+	configFile string
 )
 
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clone <ISSUE_ID> [ISSUE_ID ...]",
 		Short: "Clone given Github issues to Jira",
-		Long:  `Clone given Github issues to Jira.
+		Long: `Clone given Github issues to Jira.
 WARNING! This will write to your jira instance. Use --dryrun to see what will happen`,
-		Args:  cobra.MinimumNArgs(1),
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tokens, err := token.ReadTokensYaml(tokenFile)
+			if err != nil {
+				return err
+			}
+			jiraCfg, err := jira.LoadConfig(configFile)
 			if err != nil {
 				return err
 			}
@@ -56,6 +61,7 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 					jira.WithToken(tokens.JiraToken),
 					jira.WithProject(project),
 					jira.WithDryRun(dryRun),
+					jira.WithJiraURL(jiraCfg.JiraBaseURL),
 				)
 				if err != nil {
 					return nil
@@ -65,6 +71,7 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 		},
 	}
 
+	cmd.Flags().StringVar(&configFile, "config", "jiraConfig.yaml", "Jira config file")
 	cmd.Flags().StringVar(&tokenFile, "token-file", "tokens.yaml",
 		"file containing github and jira tokens")
 	cmd.Flags().BoolVar(&dryRun, "dryrun", false, "display what we would do without cloning")

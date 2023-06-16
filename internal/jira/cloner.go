@@ -44,9 +44,6 @@ func (c *ClonerConfig) setDefaults() error {
 		}
 		c.client = tp.Client()
 	}
-	if c.jiraURL == "" {
-		c.jiraURL = "https://issues.redhat.com"
-	}
 	return nil
 }
 
@@ -151,7 +148,7 @@ func Clone(issue *github.Issue, opts ...Option) (*gojira.Issue, error) {
 
 		if daIssue != nil {
 			fmt.Printf("Issue cloned; see %s\n",
-				fmt.Sprintf("https://issues.redhat.com/browse/%s", daIssue.Key))
+				fmt.Sprintf(config.jiraURL+"browse/%s", daIssue.Key))
 		}
 	}
 

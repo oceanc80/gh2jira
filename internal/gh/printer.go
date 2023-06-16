@@ -20,6 +20,8 @@ import (
 	"github.com/google/go-github/v47/github"
 )
 
+const unassigned_issue string = "unassigned"
+
 // So we will want to allow this to be able to take in a specific GH issue id or
 // --all.
 
@@ -38,12 +40,25 @@ func PrintGithubIssue(issue *github.Issue, oneline bool, color bool) {
 	// fmt.Printf("%5d %s %+v\n", issue.GetNumber(), issue.GetTitle(), issue.GetMilestone())
 	// return
 
+	if issue == nil {
+		return
+	}
+
+	// assignee may be nil if unassigned
+	var assigneeName string
+
+	if issue.GetAssignee() != nil {
+		assigneeName = *issue.GetAssignee().Login
+	} else {
+		assigneeName = unassigned_issue
+	}
+
 	if oneline {
 		if color {
 			// print the id in yellow, then reset the rest of the line
-			fmt.Printf("\033[33m%5d\033[0m \033[32m%s\033[31m %s\033[0m %s\n", issue.GetNumber(), issue.GetState(), *issue.GetAssignee().Login, issue.GetTitle())
+			fmt.Printf("\033[33m%5d\033[0m \033[32m%s\033[31m %s\033[0m %s\n", issue.GetNumber(), issue.GetState(), assigneeName, issue.GetTitle())
 		} else {
-			fmt.Printf("%5d %s %s %s\n", issue.GetNumber(), issue.GetState(), *issue.GetAssignee().Login, issue.GetTitle())
+			fmt.Printf("%5d %s %s %s\n", issue.GetNumber(), issue.GetState(), assigneeName, issue.GetTitle())
 		}
 	} else {
 		// fmt.Println(*issue.ID)
