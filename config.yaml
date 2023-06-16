@@ -1,0 +1,6 @@
+schema: gh2jira.config
+jiraBaseUrl: https://issues.redhat.com
+tokens:
+  jira: MTMzNzk1MzY3NzgzOv1PiZMfT5B1VvQ5llD5y46VR1d1
+  github: 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
+
