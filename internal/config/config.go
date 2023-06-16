@@ -14,38 +14,57 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
-type Config struct {
-	JiraBaseURL string `yaml:"jiraBaseURL"`
-	AuthTokens  struct {
-		JiraToken   string `yaml:"jira"`
-		GithubToken string `yaml:"github"`
-	} `yaml:"authTokens"`
+const schemaName string = "gh2jira.config"
+const defaultJiraBaseURL string = "https://issues.redhat.com/"
+
+type tokenStore struct {
+	JiraToken   string `json:"jira"`
+	GithubToken string `json:"github"`
 }
 
-func ReadConfigYaml(file string) (*Config, error) {
-	data, err := readFile(file)
+type Config struct {
+	Schema      string     `json:"schema"`
+	JiraBaseUrl string     `json:"jiraBaseUrl,omitempty"`
+	Tokens      tokenStore `json:"authTokens"`
+}
+
+func (c *Config) setDefaults() error {
+	if c.JiraBaseUrl == "" {
+		c.JiraBaseUrl = defaultJiraBaseURL
+	}
+	return nil
+}
+
+func ReadFile(f string) (*Config, error) {
+	b, err := readFile(f)
 	if err != nil {
 		return nil, err
 	}
 
-	var config Config
-	err = yaml.Unmarshal([]byte(data), &config)
+	var c Config
+	err = yaml.Unmarshal(b, &c)
 	if err != nil {
 		return nil, err
-	} else if config.JiraBaseURL == "" {
-		return nil, errors.New("missing required jira base url")
-	} else if config.AuthTokens.GithubToken == "" {
+	}
+	if c.Schema != schemaName {
+		return nil, fmt.Errorf("invalid schema: %q should be %q: %v", c.Schema, schemaName, err)
+	}
+	if c.Tokens.GithubToken == "" {
 		return nil, errors.New("missing required github token")
-	} else if config.AuthTokens.JiraToken == "" {
+	}
+	if c.Tokens.JiraToken == "" {
 		return nil, errors.New("missing required jira token")
 	}
 
-	return &config, nil
+	c.setDefaults()
+
+	return &c, nil
 }
 
 // overrideable func for mocking os.ReadFile

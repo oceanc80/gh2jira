@@ -35,11 +35,11 @@ func NewCmd() *cobra.Command {
 		Short: "List Github issues",
 		Long:  "List Github issues filtered by milestone, assignee, or label",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			configs, err := config.ReadConfigYaml(configFile)
+			configs, err := config.ReadFile(configFile)
 			if err != nil {
 				return err
 			}
-			issues, err := gh.ListIssues(gh.WithToken(configs.AuthTokens.GithubToken),
+			issues, err := gh.ListIssues(gh.WithToken(configs.Tokens.GithubToken),
 				gh.WithMilestone(milestone),
 				gh.WithAssignee(assignee),
 				gh.WithProject(project),
@@ -62,7 +62,7 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&configFile, "config-file", "config.yaml",
-		"file containing jira base url and github and jira tokens")
+		"file containing configuration")
 	cmd.Flags().StringVar(&milestone, "milestone", "",
 		"the milestone ID from the url, not the display name")
 	cmd.Flags().StringVar(&assignee, "assignee", "", "username of the issue is assigned")

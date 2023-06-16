@@ -39,24 +39,24 @@ func NewCmd() *cobra.Command {
 WARNING! This will write to your jira instance. Use --dryrun to see what will happen`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			configs, err := config.ReadConfigYaml(configFile)
+			configs, err := config.ReadFile(configFile)
 			if err != nil {
 				return err
 			}
 			for _, id := range args {
 				issueId, _ := strconv.Atoi(id)
 				issue, err := gh.GetIssue(issueId,
-					gh.WithToken(configs.AuthTokens.GithubToken),
+					gh.WithToken(configs.Tokens.GithubToken),
 					gh.WithProject(ghproject),
 				)
 				if err != nil {
 					return err
 				}
 				_, err = jira.Clone(issue,
-					jira.WithToken(configs.AuthTokens.JiraToken),
+					jira.WithToken(configs.Tokens.JiraToken),
 					jira.WithProject(project),
 					jira.WithDryRun(dryRun),
-					jira.WithJiraBaseURL(configs.JiraBaseURL),
+					jira.WithJiraBaseURL(configs.JiraBaseUrl),
 				)
 				if err != nil {
 					return nil
@@ -67,7 +67,7 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 	}
 
 	cmd.Flags().StringVar(&configFile, "config-file", "config.yaml",
-		"file containing jira base url and github and jira tokens")
+		"file containing configuration")
 	cmd.Flags().BoolVar(&dryRun, "dryrun", false, "display what we would do without cloning")
 	cmd.Flags().StringVar(&project, "project", "OSDK", "Jira project to clone to")
 	cmd.Flags().StringVar(&ghproject, "github-project", "operator-framework/operator-sdk",

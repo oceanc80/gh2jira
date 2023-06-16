@@ -80,7 +80,7 @@ Usage:
 
 Flags:
       --assignee string    username of the issue is assigned
-      --config-file string  file containing jira base url and github and jira tokens (default "config.yaml")
+      --config-file string  file containing configuration (default "config.yaml")
   -h, --help               help for list
       --label strings      label i.e. --label "documentation,bug" or --label doc --label bug
       --milestone string   the milestone ID from the url, not the display name
@@ -103,7 +103,7 @@ Usage:
   gh2jira clone <ISSUE_ID> [ISSUE_ID ...] [flags]
 
 Flags:
-      --config-file string  file containing jira base url and github and jira tokens (default "config.yaml")
+      --config-file string  file containing configuration (default "config.yaml")
       --dryrun                  display what we would do without cloning
       --github-project string   Github project to clone from e.g. ORG/REPO (default "operator-framework/operator-sdk")
   -h, --help                    help for clone

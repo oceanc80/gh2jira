@@ -23,7 +23,7 @@ import (
 var _ = Describe("Config", func() {
 	// Test out the config yaml struct and util methods
 	Context("Config", func() {
-		Describe("ReadConfigYaml", func() {
+		Describe("ReadFile", func() {
 			var (
 				expectedGhToken     string = "foo"
 				expectedJiraToken   string = "bar"
@@ -31,6 +31,7 @@ var _ = Describe("Config", func() {
 				mockReadFileGood           = func(file string) ([]byte, error) {
 
 					data := fmt.Sprintf(`
+schema: gh2jira.config
 jiraBaseURL: %s
 authTokens: 
  github: %s
@@ -47,6 +48,7 @@ authTokens:
 				mockReadFileBadYaml = func(file string) ([]byte, error) {
 
 					data := `
+schema: gh2jira.config
 jiraBaseURL: "https://"
 authTokens: 
  github: foo
@@ -56,6 +58,7 @@ authTokens:
 				}
 				mockReadFileMissingGhToken = func(file string) ([]byte, error) {
 					data := `
+schema: gh2jira.config
 jiraBaseURL: "https://"
 authTokens: 
  github: foo
@@ -64,6 +67,7 @@ authTokens:
 				}
 				mockReadFileMissingJiraToken = func(file string) ([]byte, error) {
 					data := `
+schema: gh2jira.config
 jiraBaseURL: "https://"
 authTokens: 
  jira: bar
@@ -73,35 +77,35 @@ authTokens:
 			)
 			It("should unmarshal given data into Tokens struct", func() {
 				readFile = mockReadFileGood
-				token, err := ReadConfigYaml("")
+				token, err := ReadFile("")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(token.AuthTokens.GithubToken).To(Equal(expectedGhToken))
-				Expect(token.AuthTokens.JiraToken).To(Equal(expectedJiraToken))
+				Expect(token.Tokens.GithubToken).To(Equal(expectedGhToken))
+				Expect(token.Tokens.JiraToken).To(Equal(expectedJiraToken))
 			})
 			It("should handle and return any errors when reading files", func() {
 				readFile = mockReadFileBadFile
-				token, err := ReadConfigYaml("")
+				token, err := ReadFile("")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("oh no!"))
 				Expect(token).To(BeNil())
 			})
 			It("should handle and return any errors when unmarshalling yaml", func() {
 				readFile = mockReadFileBadYaml
-				token, err := ReadConfigYaml("")
+				token, err := ReadFile("")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not find expected ':'"))
 				Expect(token).To(BeNil())
 			})
 			It("should return an error when missing jira token", func() {
 				readFile = mockReadFileMissingGhToken
-				token, err := ReadConfigYaml("")
+				token, err := ReadFile("")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("missing required jira token"))
 				Expect(token).To(BeNil())
 			})
 			It("should return an error when missing github token", func() {
 				readFile = mockReadFileMissingJiraToken
-				token, err := ReadConfigYaml("")
+				token, err := ReadFile("")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("missing required github token"))
 				Expect(token).To(BeNil())
