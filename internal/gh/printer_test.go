@@ -63,8 +63,8 @@ var _ = Describe("Printer", func() {
 
 			stdout, _ := io.ReadAll(r)
 
-			expected := fmt.Sprintf("\033[33m%5d\033[0m \033[32m%s\033[0m %s\n",
-				issue.GetNumber(), issue.GetState(), issue.GetTitle())
+			expected := fmt.Sprintf("\033[33m%5d\033[0m \033[32m%s\033[31m %s\033[0m %s\n",
+				issue.GetNumber(), issue.GetState(), "unassigned", issue.GetTitle())
 
 			Expect(expected).To(Equal(string(stdout)))
 		})
@@ -86,8 +86,8 @@ var _ = Describe("Printer", func() {
 
 			stdout, _ := io.ReadAll(r)
 
-			expected := fmt.Sprintf("%5d %s %s\n", issue.GetNumber(),
-				issue.GetState(), issue.GetTitle())
+			expected := fmt.Sprintf("%5d %s %s %s\n", issue.GetNumber(),
+				issue.GetState(), "unassigned", issue.GetTitle())
 
 			Expect(expected).To(Equal(string(stdout)))
 		})

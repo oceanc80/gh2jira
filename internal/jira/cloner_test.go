@@ -85,10 +85,10 @@ var _ = Describe("Cloner", func() {
 		Describe("WithJiraURL", func() {
 			It("should set the jira url", func() {
 				url := "https://issues.jira.com"
-				opt := WithJiraURL(url)
+				opt := WithJiraBaseURL(url)
 				err := opt(&options)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(options.jiraURL).To(Equal(url))
+				Expect(options.jiraBaseURL).To(Equal(url))
 			})
 		})
 	})
@@ -151,7 +151,7 @@ var _ = Describe("Cloner", func() {
 				// Test the clone function
 				_, err := Clone(ghissue, WithClient(mockedHTTPClient),
 					WithDryRun(true),
-					WithJiraURL("http://localhost"),
+					WithJiraBaseURL("http://localhost"),
 				)
 				w.Close()
 				Expect(err).NotTo(HaveOccurred())
@@ -177,7 +177,7 @@ var _ = Describe("Cloner", func() {
 			)
 			_, err := Clone(nil, WithClient(mockedHTTPClient),
 				WithDryRun(false),
-				WithJiraURL("http://localhost"),
+				WithJiraBaseURL("http://localhost"),
 			)
 			Expect(err).To(HaveOccurred())
 		})
@@ -221,7 +221,7 @@ var _ = Describe("Cloner", func() {
 			// Test the clone function
 			jissue, err := Clone(ghissue, WithClient(mockedHTTPClient),
 				WithDryRun(false),
-				WithJiraURL("http://localhost"),
+				WithJiraBaseURL("http://localhost"),
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(jissue).NotTo(BeNil())

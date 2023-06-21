@@ -10,37 +10,61 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package token
+package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
-type Tokens struct {
-	GithubToken string `yaml:"githubToken"`
-	JiraToken   string `yaml:"jiraToken"`
+const schemaName string = "gh2jira.config"
+const defaultJiraBaseURL string = "https://issues.redhat.com/"
+
+type tokenStore struct {
+	JiraToken   string `json:"jira"`
+	GithubToken string `json:"github"`
 }
 
-func ReadTokensYaml(file string) (*Tokens, error) {
-	data, err := readFile(file)
+type Config struct {
+	Schema      string     `json:"schema"`
+	JiraBaseUrl string     `json:"jiraBaseUrl,omitempty"`
+	Tokens      tokenStore `json:"authTokens"`
+}
+
+func (c *Config) setDefaults() error {
+	if c.JiraBaseUrl == "" {
+		c.JiraBaseUrl = defaultJiraBaseURL
+	}
+	return nil
+}
+
+func ReadFile(f string) (*Config, error) {
+	b, err := readFile(f)
 	if err != nil {
 		return nil, err
 	}
 
-	var tokens Tokens
-	err = yaml.Unmarshal([]byte(data), &tokens)
+	var c Config
+	err = yaml.Unmarshal(b, &c)
 	if err != nil {
 		return nil, err
-	} else if tokens.GithubToken == "" {
+	}
+	if c.Schema != schemaName {
+		return nil, fmt.Errorf("invalid schema: %q should be %q: %v", c.Schema, schemaName, err)
+	}
+	if c.Tokens.GithubToken == "" {
 		return nil, errors.New("missing required github token")
-	} else if tokens.JiraToken == "" {
+	}
+	if c.Tokens.JiraToken == "" {
 		return nil, errors.New("missing required jira token")
 	}
 
-	return &tokens, nil
+	c.setDefaults()
+
+	return &c, nil
 }
 
 // overrideable func for mocking os.ReadFile

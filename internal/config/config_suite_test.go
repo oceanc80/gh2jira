@@ -10,7 +10,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package token
+package config
 
 import (
 	"testing"
@@ -21,5 +21,5 @@ import (
 
 func TestUtil(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Token Suite")
+	RunSpecs(t, "Config File Suite")
 }

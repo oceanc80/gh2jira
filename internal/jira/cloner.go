@@ -27,11 +27,11 @@ import (
 type Option func(*ClonerConfig) error
 
 type ClonerConfig struct {
-	client  *http.Client
-	token   string
-	dryRun  bool
-	project string
-	jiraURL string
+	client      *http.Client
+	token       string
+	dryRun      bool
+	project     string
+	jiraBaseURL string
 }
 
 func (c *ClonerConfig) setDefaults() error {
@@ -43,9 +43,6 @@ func (c *ClonerConfig) setDefaults() error {
 			Token: c.token,
 		}
 		c.client = tp.Client()
-	}
-	if c.jiraURL == "" {
-		c.jiraURL = "https://issues.redhat.com"
 	}
 	return nil
 }
@@ -78,9 +75,9 @@ func WithProject(p string) Option {
 	}
 }
 
-func WithJiraURL(j string) Option {
+func WithJiraBaseURL(j string) Option {
 	return func(c *ClonerConfig) error {
-		c.jiraURL = j
+		c.jiraBaseURL = j
 		return nil
 	}
 }
@@ -106,7 +103,7 @@ func Clone(issue *github.Issue, opts ...Option) (*gojira.Issue, error) {
 		return nil, err
 	}
 
-	jiraClient, err := gojira.NewClient(config.client, config.jiraURL)
+	jiraClient, err := gojira.NewClient(config.client, config.jiraBaseURL)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +148,7 @@ func Clone(issue *github.Issue, opts ...Option) (*gojira.Issue, error) {
 
 		if daIssue != nil {
 			fmt.Printf("Issue cloned; see %s\n",
-				fmt.Sprintf("https://issues.redhat.com/browse/%s", daIssue.Key))
+				fmt.Sprintf(config.jiraBaseURL+"browse/%s", daIssue.Key))
 		}
 	}
 
