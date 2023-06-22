@@ -29,7 +29,3 @@ jobs:
           MERGE_REQUIRED_APPROVALS: "1"
           MERGE_METHOD: "squash"
           MERGE_ERROR_FAIL: "true"
-      - name: feedback
-        if: steps.automerge.outputs.mergeResult == "merged"
-        run: |
-          echo "Pull request  ${{ steps.automerge.outputs.pullRequestNumer }} merged!"
