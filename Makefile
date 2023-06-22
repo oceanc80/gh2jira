@@ -32,5 +32,5 @@ lint:
 
 .PHONY: clean
 clean:
-	@rm -rf $(OBJ)
+	@rm -rf $(OBJ) coverage.out
 
