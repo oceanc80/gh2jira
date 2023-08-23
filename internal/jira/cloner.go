@@ -116,7 +116,7 @@ func Clone(issue *github.Issue, opts ...Option) (*gojira.Issue, error) {
 			// Reporter: &gojira.User{
 			//     Name: "youruser",
 			// },
-			Description: fmt.Sprintf("%s\n\nUpstream Github issue: %s\n", issue.GetBody(), getWebURL(issue.GetURL())),
+			Description: fmt.Sprintf("%s", issue.GetBody()),
 			Type: gojira.IssueType{
 				Name: "Story",
 			},
@@ -149,6 +149,16 @@ func Clone(issue *github.Issue, opts ...Option) (*gojira.Issue, error) {
 		if daIssue != nil {
 			fmt.Printf("Issue cloned; see %s\n",
 				fmt.Sprintf(config.jiraBaseURL+"browse/%s", daIssue.Key))
+
+			// Add remote link to the upstream issue
+			if _, _, err = jiraClient.Issue.AddRemoteLink(daIssue.ID, &gojira.RemoteLink{
+				Object: &gojira.RemoteLinkObject{
+					URL:   getWebURL(issue.GetURL()),
+					Title: fmt.Sprintf("Upstream Issue #%v", issue.GetNumber()),
+				},
+			}); err != nil {
+				return nil, err
+			}
 		}
 	}
 
