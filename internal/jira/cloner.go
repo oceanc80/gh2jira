@@ -15,72 +15,14 @@
 package jira
 
 import (
-	"errors"
 	"fmt"
-	"net/http"
+	"io"
+	"path/filepath"
 	"strings"
 
 	gojira "github.com/andygrunwald/go-jira"
 	"github.com/google/go-github/v47/github"
 )
-
-type Option func(*ClonerConfig) error
-
-type ClonerConfig struct {
-	client      *http.Client
-	token       string
-	dryRun      bool
-	project     string
-	jiraBaseURL string
-}
-
-func (c *ClonerConfig) setDefaults() error {
-	if c.client == nil {
-		if c.token == "" {
-			return errors.New("cannot create jira client without a token")
-		}
-		tp := gojira.BearerAuthTransport{
-			Token: c.token,
-		}
-		c.client = tp.Client()
-	}
-	return nil
-}
-
-func WithClient(cl *http.Client) Option {
-	return func(c *ClonerConfig) error {
-		c.client = cl
-		return nil
-	}
-}
-
-func WithToken(token string) Option {
-	return func(c *ClonerConfig) error {
-		c.token = token
-		return nil
-	}
-}
-
-func WithDryRun(dr bool) Option {
-	return func(c *ClonerConfig) error {
-		c.dryRun = dr
-		return nil
-	}
-}
-
-func WithProject(p string) Option {
-	return func(c *ClonerConfig) error {
-		c.project = p
-		return nil
-	}
-}
-
-func WithJiraBaseURL(j string) Option {
-	return func(c *ClonerConfig) error {
-		c.jiraBaseURL = j
-		return nil
-	}
-}
 
 func getWebURL(url string) string {
 	// https://api.github.com/repos/operator-framework/operator-sdk/issues/3447
@@ -91,21 +33,12 @@ func getWebURL(url string) string {
 	return strings.Replace(strings.Replace(url, "api.github.com", "github.com", 1), "repos/", "", 1)
 }
 
-func Clone(issue *github.Issue, opts ...Option) (*gojira.Issue, error) {
-	config := ClonerConfig{}
-	for _, opt := range opts {
-		if err := opt(&config); err != nil {
+func (conn *Connection) Clone(fromIssue *github.Issue, project string, dryRun bool) (*gojira.Issue, error) {
+	if conn.client == nil {
+		// user attempted operation w/o connecting to remote first
+		if err := conn.Connect(); err != nil {
 			return nil, err
 		}
-	}
-
-	if err := config.setDefaults(); err != nil {
-		return nil, err
-	}
-
-	jiraClient, err := gojira.NewClient(config.client, config.jiraBaseURL)
-	if err != nil {
-		return nil, err
 	}
 
 	ji := gojira.Issue{
@@ -116,39 +49,53 @@ func Clone(issue *github.Issue, opts ...Option) (*gojira.Issue, error) {
 			// Reporter: &gojira.User{
 			//     Name: "youruser",
 			// },
-			Description: fmt.Sprintf("%s\n\nUpstream Github issue: %s\n", issue.GetBody(), getWebURL(issue.GetURL())),
+			Description: fromIssue.GetBody(),
 			Type: gojira.IssueType{
 				Name: "Story",
 			},
 			Project: gojira.Project{
-				Key: config.project,
+				Key: project,
 			},
-			Summary: fmt.Sprintf("[UPSTREAM] %s #%d", issue.GetTitle(), issue.GetNumber()),
+			Summary: fmt.Sprintf("[UPSTREAM] %s #%d", fromIssue.GetTitle(), fromIssue.GetNumber()),
 		},
 	}
 
 	var daIssue *gojira.Issue
 
-	if config.dryRun {
+	if dryRun {
 		fmt.Println("\n############# DRY RUN MODE #############")
-		fmt.Printf("Cloning issue #%d to jira project board: %s\n\n", issue.GetNumber(), ji.Fields.Project.Key)
+		fmt.Printf("Cloning issue #%d to jira project board: %s\n\n", fromIssue.GetNumber(), ji.Fields.Project.Key)
 		fmt.Printf("Summary: %s\n", ji.Fields.Summary)
 		fmt.Printf("Type: %s\n", ji.Fields.Type.Name)
 		fmt.Println("Description:")
 		fmt.Printf("%s\n", ji.Fields.Description)
 		fmt.Println("\n############# DRY RUN MODE #############")
 	} else {
-		fmt.Printf("Cloning issue #%d to jira project board: %s\n\n", issue.GetNumber(), ji.Fields.Project.Key)
+		fmt.Printf("Cloning issue #%d to jira project board: %s\n\n", fromIssue.GetNumber(), ji.Fields.Project.Key)
 		var err error
-		daIssue, _, err = jiraClient.Issue.Create(&ji)
+
+		daIssue, response, err := conn.client.Issue.Create(&ji)
 		if err != nil {
-			fmt.Printf("Error cloning issue: %v", err)
+			fmt.Printf("Error cloning issue: %v\n", err)
+			reqBody, ioerr := io.ReadAll(response.Response.Body)
+			if ioerr == nil {
+				fmt.Println(string(reqBody))
+			}
 			return daIssue, err
 		}
 
 		if daIssue != nil {
 			fmt.Printf("Issue cloned; see %s\n",
-				fmt.Sprintf(config.jiraBaseURL+"browse/%s", daIssue.Key))
+				fmt.Sprintf(filepath.Join(conn.baseUri, "browse/%s"), daIssue.Key))
+		}
+		// Add remote link to the upstream issue
+		if _, _, err = conn.client.Issue.AddRemoteLink(daIssue.ID, &gojira.RemoteLink{
+			Object: &gojira.RemoteLinkObject{
+				URL:   getWebURL(fromIssue.GetURL()),
+				Title: fmt.Sprintf("Upstream Issue #%v", fromIssue.GetNumber()),
+			},
+		}); err != nil {
+			return nil, err
 		}
 	}
 

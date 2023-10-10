@@ -43,21 +43,37 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 			if err != nil {
 				return err
 			}
+
+			gc, err := gh.NewConnection(gh.WithContext(cmd.Context()), gh.WithToken(configs.Tokens.GithubToken))
+			if err != nil {
+				return err
+			}
+			err = gc.Connect()
+			if err != nil {
+				return err
+			}
+
+			jc, err := jira.NewConnection(
+				jira.WithBaseURI(configs.JiraBaseUrl),
+				jira.WithAuthToken(configs.Tokens.JiraToken),
+			)
+			if err != nil {
+				return err
+			}
+
+			err = jc.Connect()
+			if err != nil {
+				return err
+			}
+
 			for _, id := range args {
 				issueId, _ := strconv.Atoi(id)
-				issue, err := gh.GetIssue(issueId,
-					gh.WithToken(configs.Tokens.GithubToken),
-					gh.WithProject(ghproject),
-				)
+				issue, err := gc.GetIssue(issueId, gh.WithProject(ghproject))
 				if err != nil {
 					return err
 				}
-				_, err = jira.Clone(issue,
-					jira.WithToken(configs.Tokens.JiraToken),
-					jira.WithProject(project),
-					jira.WithDryRun(dryRun),
-					jira.WithJiraBaseURL(configs.JiraBaseUrl),
-				)
+
+				_, err = jc.Clone(issue, project, dryRun)
 				if err != nil {
 					return nil
 				}
