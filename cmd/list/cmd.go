@@ -22,11 +22,9 @@ import (
 )
 
 var (
-	configFile string
-	milestone  string
-	assignee   string
-	project    string
-	label      []string
+	milestone string
+	assignee  string
+	label     []string
 )
 
 func NewCmd() *cobra.Command {
@@ -35,12 +33,14 @@ func NewCmd() *cobra.Command {
 		Short: "List Github issues",
 		Long:  "List Github issues filtered by milestone, assignee, or label",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			configs, err := config.ReadFile(configFile)
+
+			config := config.NewConfig(cmd)
+			err := config.Read()
 			if err != nil {
 				return err
 			}
 
-			gc, err := gh.NewConnection(gh.WithContext(cmd.Context()), gh.WithToken(configs.Tokens.GithubToken))
+			gc, err := gh.NewConnection(gh.WithContext(cmd.Context()), gh.WithToken(config.Tokens.GithubToken))
 			if err != nil {
 				return err
 			}
@@ -52,7 +52,7 @@ func NewCmd() *cobra.Command {
 			issues, err := gc.ListIssues(
 				gh.WithMilestone(milestone),
 				gh.WithAssignee(assignee),
-				gh.WithProject(project),
+				gh.WithProject(config.GithubProject),
 				gh.WithLabels(label...),
 			)
 			if err != nil {
@@ -71,13 +71,9 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&configFile, "config-file", "config.yaml",
-		"file containing configuration")
 	cmd.Flags().StringVar(&milestone, "milestone", "",
 		"the milestone ID from the url, not the display name")
 	cmd.Flags().StringVar(&assignee, "assignee", "", "username assigned the issue")
-	cmd.Flags().StringVar(&project, "project", "operator-framework/operator-sdk",
-		"Github project to list e.g. ORG/REPO")
 	cmd.Flags().StringSliceVar(&label, "label", nil,
 		"label i.e. --label \"documentation,bug\" or --label doc --label bug (default: none)")
 

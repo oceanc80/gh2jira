@@ -21,14 +21,34 @@ import (
 	"github.com/jmrodri/gh2jira/cmd/list"
 )
 
+const defaultTokensFile string = "tokenstore.yaml"
+const defaultProfilesFile string = "profiles.yaml"
+
+var (
+	tokensFile   string
+	profilesFile string
+	profileName  string
+	ghProject    string
+	jProject     string
+)
+
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gh2jira",
 		Short: "github to jira issue cloner",
 		Long:  "",
+		Run:   func(_ *cobra.Command, _ []string) {}, // adding an empty function here to preserve non-zero exit status for misstated subcommands/flags for the command hierarchy
 	}
 	// add the child commands: list and clone
 	cmd.AddCommand(list.NewCmd(), clone.NewCmd())
+
+	cmd.PersistentFlags().StringVar(&tokensFile, "token-file", defaultTokensFile, "file containing authentication tokens, if different than profile")
+	cmd.PersistentFlags().StringVar(&profilesFile, "profiles-file", defaultProfilesFile, "filename containing optional profile attributes")
+
+	// profile / project names must not have default values since they will always be used as if they were user-specified values, overriding all default values given
+	cmd.PersistentFlags().StringVar(&profileName, "profile-name", "", "profile name to use (implies `profiles-file`)")
+	cmd.PersistentFlags().StringVar(&ghProject, "github-project", "", "Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk")
+	cmd.PersistentFlags().StringVar(&jProject, "jira-project", "", "Jira project if not using a profile, e.g.: OSDK")
 
 	return cmd
 }

@@ -25,10 +25,7 @@ import (
 )
 
 var (
-	dryRun     bool
-	project    string
-	ghproject  string
-	configFile string
+	dryRun bool
 )
 
 func NewCmd() *cobra.Command {
@@ -39,12 +36,14 @@ func NewCmd() *cobra.Command {
 WARNING! This will write to your jira instance. Use --dryrun to see what will happen`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			configs, err := config.ReadFile(configFile)
+
+			config := config.NewConfig(cmd)
+			err := config.Read()
 			if err != nil {
 				return err
 			}
 
-			gc, err := gh.NewConnection(gh.WithContext(cmd.Context()), gh.WithToken(configs.Tokens.GithubToken))
+			gc, err := gh.NewConnection(gh.WithContext(cmd.Context()), gh.WithToken(config.Tokens.GithubToken))
 			if err != nil {
 				return err
 			}
@@ -54,8 +53,8 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 			}
 
 			jc, err := jira.NewConnection(
-				jira.WithBaseURI(configs.JiraBaseUrl),
-				jira.WithAuthToken(configs.Tokens.JiraToken),
+				jira.WithBaseURI(config.JiraBaseUrl),
+				jira.WithAuthToken(config.Tokens.JiraToken),
 			)
 			if err != nil {
 				return err
@@ -68,12 +67,12 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 
 			for _, id := range args {
 				issueId, _ := strconv.Atoi(id)
-				issue, err := gc.GetIssue(issueId, gh.WithProject(ghproject))
+				issue, err := gc.GetIssue(issueId, gh.WithProject(config.GithubProject))
 				if err != nil {
 					return err
 				}
 
-				_, err = jc.Clone(issue, project, dryRun)
+				_, err = jc.Clone(issue, config.JiraProject, dryRun)
 				if err != nil {
 					return nil
 				}
@@ -82,12 +81,7 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 		},
 	}
 
-	cmd.Flags().StringVar(&configFile, "config-file", "config.yaml",
-		"file containing configuration")
-	cmd.Flags().BoolVar(&dryRun, "dryrun", false, "display what we would do without cloning")
-	cmd.Flags().StringVar(&project, "project", "OSDK", "Jira project to clone to")
-	cmd.Flags().StringVar(&ghproject, "github-project", "operator-framework/operator-sdk",
-		"Github project to clone from e.g. ORG/REPO")
+	cmd.Flags().BoolVar(&dryRun, "dryrun", false, "display what would happen without taking actually doing it")
 
 	return cmd
 }

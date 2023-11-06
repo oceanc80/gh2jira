@@ -2,5 +2,6 @@ gh2jira
 coverage.out
 tokens.yaml
 config.yaml
-projects.yaml
+tokenstore.yaml
+profiles.yaml
 vendor/
