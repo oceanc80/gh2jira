@@ -30,7 +30,8 @@ authTokens:
 2. Save to the `config.yaml` file under the key `jira`
 
 ### Configuring the JiraURL
-Specify the required Jira URL in the `config.yaml` file under the key `jiraBaseURL`
+Specify the required Jira URL in the `config.yaml` file under the key `jiraBaseURL`. The base url should end with `/`, for example `https://issues.opensource.com/`.
+
 ### Build the Utility
 Run `go build` from the root of the directory.
 
