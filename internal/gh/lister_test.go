@@ -15,220 +15,317 @@
 package gh
 
 import (
-	"fmt"
+	"context"
 	"net/http"
+	"reflect"
+	"testing"
 
 	"github.com/google/go-github/v47/github"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Describe("Lister", func() {
+func TestLister_GetOrg(t *testing.T) {
+	type scenario struct {
+		name    string
+		project string
+		org     string
+	}
+	scenarios := []scenario{
+		{
+			name:    "valid project yields valid org",
+			project: "operator-framework/operator-sdk",
+			org:     "operator-framework",
+		},
+		{
+			name:    "empty project yields empty org",
+			project: "",
+			org:     "",
+		},
+		{
+			name:    "project with no / yields entire string",
+			project: "operator-framework",
+			org:     "operator-framework",
+		},
+		{
+			name:    "project with leading / yields empty string",
+			project: "/operator-framework",
+			org:     "",
+		},
+	}
+	for _, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			spec := ListSpec{project: s.project}
+			require.Equal(t, spec.GetGithubOrg(), s.org)
+		})
+	}
+}
 
-	// Test out the ListerConfig struct and its methods
-	Context("ListerConfig", func() {
-		Describe("GetGithubOrg", func() {
-			var (
-				options ListerConfig
-			)
-			BeforeEach(func() {
-				options = ListerConfig{}
-			})
-			It("should return org if given an org/repo formatted string", func() {
-				options.Project = "operator-framework/operator-sdk"
-				Expect(options.GetGithubOrg()).To(Equal("operator-framework"))
-			})
-			It("should return empty string if the project is empty", func() {
-				options.Project = ""
-				Expect(options.GetGithubOrg()).To(Equal(""))
-			})
-			It("should return entire string if the project has no /", func() {
-				options.Project = "operator-framework"
-				Expect(options.GetGithubOrg()).To(Equal("operator-framework"))
-			})
-			It("should return empty string if the project starts with /", func() {
-				options.Project = "/operator-framework"
-				Expect(options.GetGithubOrg()).To(Equal(""))
-			})
+func TestLister_GetRepo(t *testing.T) {
+	type scenario struct {
+		name    string
+		project string
+		repo    string
+	}
+	scenarios := []scenario{
+		{
+			name:    "valid project yields valid repo",
+			project: "operator-framework/operator-sdk",
+			repo:    "operator-sdk",
+		},
+		{
+			name:    "empty project yields empty repo",
+			project: "",
+			repo:    "",
+		},
+		{
+			name:    "project with no / yields entire string",
+			project: "operator-framework",
+			repo:    "operator-framework",
+		},
+		{
+			name:    "project with leading / yields second string",
+			project: "/operator-framework",
+			repo:    "operator-framework",
+		},
+	}
+	for _, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			spec := ListSpec{project: s.project}
+			require.Equal(t, spec.GetGithubRepo(), s.repo)
 		})
-		Describe("GetGithubRepo", func() {
-			var (
-				options ListerConfig
-			)
-			BeforeEach(func() {
-				options = ListerConfig{}
-			})
-			It("should return repo if given an org/repo formatted string", func() {
-				options.Project = "operator-framework/operator-sdk"
-				Expect(options.GetGithubRepo()).To(Equal("operator-sdk"))
-			})
-			It("should return empty string if the project is empty", func() {
-				options.Project = ""
-				Expect(options.GetGithubRepo()).To(Equal(""))
-			})
-			It("should return entire string if the project has no /", func() {
-				options.Project = "operator-framework"
-				Expect(options.GetGithubRepo()).To(Equal("operator-framework"))
-			})
-			It("should return the second string if the project starts with /", func() {
-				options.Project = "/operator-framework"
-				Expect(options.GetGithubRepo()).To(Equal("operator-framework"))
-			})
-		})
-	})
+	}
 
-	Context("With Option methods", func() {
-		var (
-			options ListerConfig
-		)
-		BeforeEach(func() {
-			options = ListerConfig{}
-		})
-		Describe("WithClient", func() {
-			It("should set client to nil if passed nil", func() {
-				opt := WithClient(nil)
-				err := opt(&options)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(options.client).To(BeNil())
-			})
-			It("should set the client if given one", func() {
-				mc := mock.NewMockedHTTPClient()
-				opt := WithClient(mc)
-				err := opt(&options)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(options.client).To(Equal(mc))
-			})
-		})
-		Describe("WithToken", func() {
-			It("should set provided token", func() {
-				opt := WithToken("i'm a token!")
-				err := opt(&options)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(options.Token).To(Equal("i'm a token!"))
-			})
-		})
-		Describe("WithMilestone", func() {
-			It("should set the milestone", func() {
-				opt := WithMilestone("47")
-				err := opt(&options)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(options.Milestone).To(Equal("47"))
-			})
-		})
-		Describe("WithAssignee", func() {
-			It("should set the assignee", func() {
-				opt := WithAssignee("johndoe")
-				err := opt(&options)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(options.Assignee).To(Equal("johndoe"))
-			})
-		})
-		Describe("WithProject", func() {
-			It("should set the project", func() {
-				opt := WithProject("operator-framework/operator-sdk")
-				err := opt(&options)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(options.Project).To(Equal("operator-framework/operator-sdk"))
-			})
-		})
-		Describe("WithLabel", func() {
-			It("should set the label", func() {
-				labels := []string{"kind/bug", "documentation"}
-				opt := WithLabel(labels)
-				err := opt(&options)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(options.Label).To(Equal(labels))
-			})
-		})
-	})
+}
 
-	Describe("ListIssues", func() {
-		It("should return an error if there is no token", func() {
-			iss, err := ListIssues()
-			Expect(iss).To(BeNil())
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("cannot create github client without a token"))
+func TestLister_Options(t *testing.T) {
+	type scenario struct {
+		name    string
+		options []ListOption
+		want    *ListSpec
+		wantErr bool
+	}
+	scenarios := []scenario{
+		{
+			name: "WithProject sets project",
+			options: []ListOption{
+				WithProject("project"),
+			},
+			want: &ListSpec{
+				project: "project",
+			},
+			wantErr: false,
+		},
+		{
+			name: "WithMilestone sets milestone",
+			options: []ListOption{
+				WithMilestone("milestone"),
+			},
+			want: &ListSpec{
+				milestone: "milestone",
+			},
+			wantErr: false,
+		},
+		{
+			name: "WithAssignee sets assignee",
+			options: []ListOption{
+				WithAssignee("assignee"),
+			},
+			want: &ListSpec{
+				assignee: "assignee",
+			},
+			wantErr: false,
+		},
+		{
+			name: "WithLabels sets labels",
+			options: []ListOption{
+				WithLabels("label1", "label2"),
+			},
+			want: &ListSpec{
+				labels: []string{"label1", "label2"},
+			},
+			wantErr: false,
+		},
+	}
+	for _, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			spec := &ListSpec{}
+			for _, opt := range s.options {
+				if err := opt(spec); (err != nil) != s.wantErr {
+					t.Errorf("ListOption() error = %v, wantErr %v", err, s.wantErr)
+					return
+				}
+			}
+			if !reflect.DeepEqual(spec, s.want) {
+				t.Errorf("ListOption() = %v, want %v", spec, s.want)
+			}
 		})
-		It("should find open issues", func() {
-			mockedHTTPClient := mock.NewMockedHTTPClient(
-				mock.WithRequestMatch(mock.GetReposIssuesByOwnerByRepo,
-					[]github.Issue{
-						{
-							ID:    github.Int64(123),
-							Title: github.String("Issue 1"),
-							State: github.String("open"),
+	}
+}
+
+func TestLister_ListIssues(t *testing.T) {
+	type scenario struct {
+		name              string
+		options           []ListOption
+		connectionOptions []ConnectionOption
+		want              []*github.Issue
+		wantErr           bool
+		errMatch          string
+	}
+	scenarios := []scenario{
+		{
+			name: "finds open issues",
+			options: []ListOption{
+				WithProject("fakeorg/fakeproject"),
+			},
+			connectionOptions: []ConnectionOption{
+				WithToken("token"),
+				WithContext(context.Background()),
+				WithTransport(mock.NewMockedHTTPClient(
+					mock.WithRequestMatch(mock.GetReposIssuesByOwnerByRepo,
+						[]github.Issue{
+							{
+								ID:    github.Int64(123),
+								Title: github.String("Issue 1"),
+								State: github.String("open"),
+							},
+							{
+								ID:    github.Int64(456),
+								Title: github.String("Issue 2"),
+								State: github.String("open"),
+							},
 						},
-						{
+					),
+				)),
+			},
+			want: []*github.Issue{
+				{
+					ID:    github.Int64(123),
+					Title: github.String("Issue 1"),
+					State: github.String("open"),
+				},
+				{
+					ID:    github.Int64(456),
+					Title: github.String("Issue 2"),
+					State: github.String("open"),
+				},
+			},
+			wantErr:  false,
+			errMatch: "",
+		},
+		{
+			name: "return error if list fails",
+			options: []ListOption{
+				WithProject("fakeorg/fakeproject"),
+			},
+			connectionOptions: []ConnectionOption{
+				WithToken("token"),
+				WithContext(context.Background()),
+				WithTransport(mock.NewMockedHTTPClient(
+					mock.WithRequestMatchHandler(
+						mock.GetReposIssuesByOwnerByRepo,
+						http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							mock.WriteError(
+								w,
+								http.StatusInternalServerError,
+								"github went belly up or something",
+							)
+						}),
+					),
+				),
+				)},
+			want:     []*github.Issue{},
+			wantErr:  true,
+			errMatch: "github went belly up or something",
+		},
+	}
+	for _, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			c, err := NewConnection(s.connectionOptions...)
+			require.NoError(t, err)
+
+			err = c.Connect()
+			require.NoError(t, err)
+
+			iss, err := c.ListIssues(s.options...)
+
+			if err == nil {
+				require.ElementsMatch(t, iss, s.want)
+			} else {
+				require.Equal(t, s.wantErr, true)
+				require.Nil(t, iss)
+
+				// because the mock library doesn't return a completely valid github.ErrorResponse (missing response)
+				// we have to wrap and compare the field(s) we care about
+				gherr, ok := err.(*github.ErrorResponse)
+				require.True(t, ok)
+				require.Contains(t, gherr.Message, s.errMatch)
+			}
+		})
+	}
+}
+
+func TestLister_GetIssue(t *testing.T) {
+	type scenario struct {
+		name              string
+		options           []ListOption
+		connectionOptions []ConnectionOption
+		id                int
+		want              *github.Issue
+		wantErr           bool
+		errMatch          string
+	}
+	scenarios := []scenario{
+		{
+			name: "success",
+			options: []ListOption{
+				WithProject("fakeorg/fakeproject"),
+			},
+			connectionOptions: []ConnectionOption{
+				WithToken("token"),
+				WithContext(context.Background()),
+				WithTransport(mock.NewMockedHTTPClient(
+					mock.WithRequestMatch(mock.GetReposIssuesByOwnerByRepoByIssueNumber,
+						github.Issue{
 							ID:    github.Int64(456),
 							Title: github.String("Issue 2"),
 							State: github.String("open"),
 						},
-					},
-				),
-			)
-			iss, err := ListIssues(WithClient(mockedHTTPClient), WithProject("fakeorg/fakeproject"))
-			Expect(iss).NotTo(BeNil())
-			Expect(len(iss)).To(Equal(2))
-			Expect(err).NotTo(HaveOccurred())
+					),
+				)),
+			},
+			want: &github.Issue{
+				ID:    github.Int64(456),
+				Title: github.String("Issue 2"),
+				State: github.String("open"),
+			},
+			id:       456,
+			wantErr:  false,
+			errMatch: "",
+		},
+	}
+	for _, s := range scenarios {
+		t.Run(s.name, func(t *testing.T) {
+			c, err := NewConnection(s.connectionOptions...)
+			require.NoError(t, err)
+
+			err = c.Connect()
+			require.NoError(t, err)
+
+			iss, err := c.GetIssue(s.id, s.options...)
+
+			if err == nil {
+				require.Equal(t, iss, s.want)
+			} else {
+				require.Equal(t, s.wantErr, true)
+				require.Nil(t, iss)
+
+				// because the mock library doesn't return a completely valid github.ErrorResponse (missing response)
+				// we have to wrap and compare the field(s) we care about
+				gherr, ok := err.(*github.ErrorResponse)
+				require.True(t, ok)
+				require.Contains(t, gherr.Message, s.errMatch)
+			}
 		})
-		It("should return error if list fails", func() {
-			// if our request returns an error ListIssues should return
-			// that error
-			mockedHTTPClient := mock.NewMockedHTTPClient(
-				mock.WithRequestMatchHandler(
-					mock.GetReposIssuesByOwnerByRepo,
-					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						mock.WriteError(
-							w,
-							http.StatusInternalServerError,
-							"github went belly up or something",
-						)
-					}),
-				),
-			)
-			iss, err := ListIssues(WithClient(mockedHTTPClient), WithProject("fakeorg/fakeproject"))
-			Expect(iss).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-		It("should return error if Options return an error", func() {
-			_, err := ListIssues(func(c *ListerConfig) error {
-				return fmt.Errorf("do you see me")
-			})
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("do you see me"))
-		})
-	})
-	Describe("GetIssue", func() {
-		It("should return an error if there is no token", func() {
-			iss, err := GetIssue(10)
-			Expect(iss).To(BeNil())
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("cannot create github client without a token"))
-		})
-		It("should return error if Options return an error", func() {
-			_, err := GetIssue(10, func(c *ListerConfig) error {
-				return fmt.Errorf("do you see me")
-			})
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("do you see me"))
-		})
-		It("should find the open issue", func() {
-			mockedHTTPClient := mock.NewMockedHTTPClient(
-				mock.WithRequestMatch(mock.GetReposIssuesByOwnerByRepoByIssueNumber,
-					github.Issue{
-						ID:     github.Int64(456),
-						Title:  github.String("Issue 2"),
-						State:  github.String("open"),
-						Number: github.Int(456),
-					},
-				),
-			)
-			iss, err := GetIssue(456, WithClient(mockedHTTPClient),
-				WithProject("fakeorg/fakeproject"))
-			Expect(iss).NotTo(BeNil())
-			Expect(iss.GetNumber()).To(Equal(456))
-			Expect(err).NotTo(HaveOccurred())
-		})
-	})
-})
+	}
+}

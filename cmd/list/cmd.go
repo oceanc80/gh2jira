@@ -39,11 +39,21 @@ func NewCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			issues, err := gh.ListIssues(gh.WithToken(configs.Tokens.GithubToken),
+
+			gc, err := gh.NewConnection(gh.WithContext(cmd.Context()), gh.WithToken(configs.Tokens.GithubToken))
+			if err != nil {
+				return err
+			}
+			err = gc.Connect()
+			if err != nil {
+				return err
+			}
+
+			issues, err := gc.ListIssues(
 				gh.WithMilestone(milestone),
 				gh.WithAssignee(assignee),
 				gh.WithProject(project),
-				gh.WithLabel(label),
+				gh.WithLabels(label...),
 			)
 			if err != nil {
 				return err
@@ -65,11 +75,11 @@ func NewCmd() *cobra.Command {
 		"file containing configuration")
 	cmd.Flags().StringVar(&milestone, "milestone", "",
 		"the milestone ID from the url, not the display name")
-	cmd.Flags().StringVar(&assignee, "assignee", "", "username of the issue is assigned")
+	cmd.Flags().StringVar(&assignee, "assignee", "", "username assigned the issue")
 	cmd.Flags().StringVar(&project, "project", "operator-framework/operator-sdk",
 		"Github project to list e.g. ORG/REPO")
 	cmd.Flags().StringSliceVar(&label, "label", nil,
-		"label i.e. --label \"documentation,bug\" or --label doc --label bug")
+		"label i.e. --label \"documentation,bug\" or --label doc --label bug (default: none)")
 
 	return cmd
 }

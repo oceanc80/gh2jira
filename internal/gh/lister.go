@@ -16,109 +16,69 @@ package gh
 
 import (
 	"context"
-	"errors"
-	"net/http"
 	"strings"
 
 	"github.com/google/go-github/v47/github"
-	"golang.org/x/oauth2"
 )
 
-type Option func(*ListerConfig) error
-
-type ListerConfig struct {
-	client    *http.Client
-	Milestone string
-	Token     string
-	Assignee  string
-	Project   string
-	Label     []string
+type ListSpec struct {
+	project   string
+	milestone string
+	assignee  string
+	labels    []string
 }
 
-func (c *ListerConfig) setDefaults() error {
-	if c.client == nil {
-		ctx := context.Background()
-		if c.Token == "" {
-			return errors.New("cannot create github client without a token")
-		}
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: c.Token},
-		)
-		c.client = oauth2.NewClient(ctx, ts)
+type ListOption func(*ListSpec) error
+
+func WithProject(project string) ListOption {
+	return func(l *ListSpec) error {
+		l.project = project
+		return nil
 	}
-	return nil
 }
 
-func (l *ListerConfig) GetGithubOrg() string {
-	return strings.Split(l.Project, "/")[0]
+func WithMilestone(milestone string) ListOption {
+	return func(l *ListSpec) error {
+		l.milestone = milestone
+		return nil
+	}
 }
 
-func (l *ListerConfig) GetGithubRepo() string {
-	s := strings.Split(l.Project, "/")
+func WithAssignee(assignee string) ListOption {
+	return func(l *ListSpec) error {
+		l.assignee = assignee
+		return nil
+	}
+}
+
+func WithLabels(labels ...string) ListOption {
+	return func(l *ListSpec) error {
+		l.labels = labels
+		return nil
+	}
+}
+
+func (a *ListSpec) GetGithubOrg() string {
+	return strings.Split(a.project, "/")[0]
+}
+
+func (a *ListSpec) GetGithubRepo() string {
+	s := strings.Split(a.project, "/")
 	if len(s) == 1 {
 		return s[0]
 	}
 	return s[1]
 }
 
-func WithClient(cl *http.Client) Option {
-	return func(c *ListerConfig) error {
-		c.client = cl
-		return nil
-	}
-}
-
-func WithToken(token string) Option {
-	return func(c *ListerConfig) error {
-		c.Token = token
-		return nil
-	}
-}
-
-func WithMilestone(m string) Option {
-	return func(c *ListerConfig) error {
-		c.Milestone = m
-		return nil
-	}
-}
-
-func WithAssignee(a string) Option {
-	return func(c *ListerConfig) error {
-		c.Assignee = a
-		return nil
-	}
-}
-
-func WithProject(p string) Option {
-	return func(c *ListerConfig) error {
-		c.Project = p
-		return nil
-	}
-}
-
-func WithLabel(l []string) Option {
-	return func(c *ListerConfig) error {
-		c.Label = l
-		return nil
-	}
-}
-
-func GetIssue(issueNum int, opts ...Option) (*github.Issue, error) {
-	config := ListerConfig{}
-	for _, opt := range opts {
-		if err := opt(&config); err != nil {
+func (c *Connection) GetIssue(issueNum int, options ...ListOption) (*github.Issue, error) {
+	action := &ListSpec{}
+	for _, opt := range options {
+		if err := opt(action); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := config.setDefaults(); err != nil {
-		return nil, err
-	}
-
-	client := github.NewClient(config.client)
-
-	issue, _, err := client.Issues.Get(context.Background(), config.GetGithubOrg(),
-		config.GetGithubRepo(), issueNum)
+	issue, _, err := c.client.Issues.Get(c.ctx, action.GetGithubOrg(), action.GetGithubRepo(), issueNum)
 
 	if err != nil {
 		return nil, err
@@ -126,33 +86,32 @@ func GetIssue(issueNum int, opts ...Option) (*github.Issue, error) {
 	return issue, nil
 }
 
-func ListIssues(opts ...Option) ([]*github.Issue, error) {
-	config := ListerConfig{}
-	for _, opt := range opts {
-		if err := opt(&config); err != nil {
+// returns a list of all matching issues until there are no more pages
+func (c *Connection) ListIssues(options ...ListOption) ([]*github.Issue, error) {
+	action := &ListSpec{}
+	for _, opt := range options {
+		if err := opt(action); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := config.setDefaults(); err != nil {
-		return nil, err
-	}
-
-	client := github.NewClient(config.client)
-
 	opt := &github.IssueListByRepoOptions{
 		ListOptions: github.ListOptions{PerPage: 50},
 		State:       "open",
-		Milestone:   config.Milestone,
-		Assignee:    config.Assignee,
-		Labels:      config.Label,
+		Milestone:   action.milestone,
+		Assignee:    action.assignee,
+		Labels:      action.labels,
 	}
 
 	var allIssues []*github.Issue
 
 	for {
-		issues, resp, err := client.Issues.ListByRepo(context.Background(),
-			config.GetGithubOrg(), config.GetGithubRepo(), opt)
+		issues, resp, err := c.client.Issues.ListByRepo(
+			context.Background(),
+			action.GetGithubOrg(),
+			action.GetGithubRepo(),
+			opt,
+		)
 
 		if err != nil {
 			return nil, err
