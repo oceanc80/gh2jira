@@ -13,7 +13,7 @@ package config
 
 import (
 	"io"
-	"os"
+	"strings"
 
 	"sigs.k8s.io/yaml"
 )
@@ -35,15 +35,8 @@ type Profiles struct {
 	Profiles []Profile `json:"profiles"`
 }
 
-func ReadProfiles(filename string) (*Profiles, error) {
-
-	reader, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
-
-	data, err := io.ReadAll(reader)
+func ReadProfiles(r io.Reader) (*Profiles, error) {
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +52,7 @@ func ReadProfiles(filename string) (*Profiles, error) {
 
 func (p *Profiles) GetProfile(projectName string) *Profile {
 	for _, profile := range p.Profiles {
-		if profile.Description == projectName {
+		if strings.EqualFold(profile.Description, projectName) {
 			return &profile
 		}
 	}

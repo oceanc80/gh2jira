@@ -22,6 +22,7 @@ import (
 	"github.com/jmrodri/gh2jira/internal/config"
 	"github.com/jmrodri/gh2jira/internal/gh"
 	"github.com/jmrodri/gh2jira/internal/jira"
+	"github.com/jmrodri/gh2jira/pkg/util"
 )
 
 var (
@@ -37,8 +38,13 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			config := config.NewConfig(cmd)
-			err := config.Read()
+			ff, err := util.NewFlagFeeder(cmd)
+			if err != nil {
+				return err
+			}
+
+			config := config.NewConfig(ff)
+			err = config.Read()
 			if err != nil {
 				return err
 			}

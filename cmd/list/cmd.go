@@ -19,6 +19,7 @@ import (
 
 	"github.com/jmrodri/gh2jira/internal/config"
 	"github.com/jmrodri/gh2jira/internal/gh"
+	"github.com/jmrodri/gh2jira/pkg/util"
 )
 
 var (
@@ -34,8 +35,12 @@ func NewCmd() *cobra.Command {
 		Long:  "List Github issues filtered by milestone, assignee, or label",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			config := config.NewConfig(cmd)
-			err := config.Read()
+			ff, err := util.NewFlagFeeder(cmd)
+			if err != nil {
+				return err
+			}
+			config := config.NewConfig(ff)
+			err = config.Read()
 			if err != nil {
 				return err
 			}

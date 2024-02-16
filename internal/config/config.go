@@ -12,9 +12,11 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 
-	"github.com/spf13/cobra"
+	"github.com/jmrodri/gh2jira/pkg/util"
 )
 
 const defaultJiraBaseURL string = "https://issues.redhat.com/"
@@ -27,17 +29,16 @@ type Config struct {
 	JiraBaseUrl   string
 	Tokens        *TokenPair
 
-	// cobraCmd is the cobra command that is being executed
-	cobraCmd *cobra.Command
+	Flags *util.FlagFeeder
 }
 
-func NewConfig(cmd *cobra.Command) *Config {
+func NewConfig(ff *util.FlagFeeder) *Config {
 	return &Config{
-		cobraCmd:      cmd,
 		JiraBaseUrl:   defaultJiraBaseURL,
 		GithubProject: defaultGithubProject,
 		JiraProject:   defaultJiraProject,
 		Tokens:        &TokenPair{},
+		Flags:         ff,
 	}
 }
 
@@ -48,76 +49,57 @@ func (c *Config) Read() error {
 	// 3. default config file
 	// 4. defaults
 
-	profileFile, err := c.cobraCmd.Flags().GetString("profiles-file")
-	if err != nil {
-		return err
-	}
 	tokenFile := ""
 
-	fmt.Printf(">>> reading profiles from %q\n", profileFile)
-	profiles, err := ReadProfiles(profileFile)
-	if err != nil {
-		return err
-	}
-	profileName, err := c.cobraCmd.Flags().GetString("profile-name")
-	if err != nil {
-		return err
-	}
-	if profileName != "" {
-		fmt.Printf(">>> using profile %q\n", profileName)
-		profile := profiles.GetProfile(profileName)
-		if profile == nil {
-			return fmt.Errorf("profile %s not found", profileName)
+	if c.Flags.ProfilesFile != "" && c.Flags.ProfileName != "" {
+		b, err := readProfiles(c.Flags.ProfilesFile)
+		if err != nil {
+			return err
 		}
-		c.GithubProject = profile.GithubConfig.Project
-		c.JiraProject = profile.JiraConfig.Project
-		fmt.Printf(">>> config after reading profiles: %#v\n", c)
+		reader := bytes.NewReader(b)
 
-		tokenFile = profile.TokenStore
-		if tokenFile != "" {
-			fmt.Printf(">>> token file from profile: %q\n", tokenFile)
-			c.Tokens, err = readTokens(tokenFile)
-			if err != nil {
-				return err
+		profiles, err := ReadProfiles(reader)
+		if err != nil {
+			return err
+		}
+		if c.Flags.ProfileName != "" {
+			profile := profiles.GetProfile(c.Flags.ProfileName)
+			if profile == nil {
+				return fmt.Errorf("profile %s not found", c.Flags.ProfileName)
+			}
+			c.GithubProject = profile.GithubConfig.Project
+			c.JiraProject = profile.JiraConfig.Project
+
+			tokenFile = profile.TokenStore
+			if tokenFile != "" {
+				c.Tokens, err = readTokens(tokenFile)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 
-	tokenFile, err = c.cobraCmd.Flags().GetString("token-file")
-	if err != nil {
-		return err
-	}
-	if tokenFile != "" {
-		c.Tokens, err = readTokens(tokenFile)
+	if c.Flags.TokenFile != "" {
+		tokens, err := readTokens(c.Flags.TokenFile)
 		if err != nil {
 			return err
 		}
-		fmt.Printf(">>> token file from command line: %q\n", tokenFile)
+		c.Tokens = tokens
 	}
 
-	githubProject, err := c.cobraCmd.Flags().GetString("github-project")
-	if err != nil {
-		return err
-	}
-	if githubProject != "" {
-		fmt.Printf(">>> github project from command line: %q\n", githubProject)
-		c.GithubProject = githubProject
+	if c.Flags.GithubProject != "" {
+		c.GithubProject = c.Flags.GithubProject
 	}
 
-	jiraProject, err := c.cobraCmd.Flags().GetString("jira-project")
-	if err != nil {
-		return err
+	if c.Flags.JiraProject != "" {
+		c.JiraProject = c.Flags.JiraProject
 	}
-	if jiraProject != "" {
-		fmt.Printf(">>> jira project from command line: %q\n", jiraProject)
-		c.JiraProject = jiraProject
-	}
-	fmt.Printf(">>> config after processing flags: %#v\n", c)
 
 	return nil
 }
 
-func readTokens(filename string) (*TokenPair, error) {
+var readTokens = func(filename string) (*TokenPair, error) {
 	rawTokens, err := ReadTokenStore(filename)
 	if err != nil {
 		return nil, err
@@ -126,4 +108,9 @@ func readTokens(filename string) (*TokenPair, error) {
 		GithubToken: rawTokens.Tokens.GithubToken,
 		JiraToken:   rawTokens.Tokens.JiraToken,
 	}, nil
+}
+
+// overrideable func for mocking os.ReadFile
+var readProfiles = func(filename string) ([]byte, error) {
+	return os.ReadFile(filename)
 }
