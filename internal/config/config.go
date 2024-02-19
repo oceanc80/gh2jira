@@ -2,72 +2,115 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package config
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"os"
 
-	"sigs.k8s.io/yaml"
+	"github.com/jmrodri/gh2jira/pkg/util"
 )
 
-const schemaName string = "gh2jira.config"
 const defaultJiraBaseURL string = "https://issues.redhat.com/"
-
-type tokenStore struct {
-	JiraToken   string `json:"jira"`
-	GithubToken string `json:"github"`
-}
+const defaultGithubProject string = "operator-framework/operator-sdk"
+const defaultJiraProject string = "OSDK"
 
 type Config struct {
-	Schema      string     `json:"schema"`
-	JiraBaseUrl string     `json:"jiraBaseUrl,omitempty"`
-	Tokens      tokenStore `json:"authTokens"`
+	GithubProject string
+	JiraProject   string
+	JiraBaseUrl   string
+	Tokens        *TokenPair
+
+	Flags *util.FlagFeeder
 }
 
-func (c *Config) setDefaults() error {
-	if c.JiraBaseUrl == "" {
-		c.JiraBaseUrl = defaultJiraBaseURL
+func NewConfig(ff *util.FlagFeeder) *Config {
+	return &Config{
+		JiraBaseUrl:   defaultJiraBaseURL,
+		GithubProject: defaultGithubProject,
+		JiraProject:   defaultJiraProject,
+		Tokens:        &TokenPair{},
+		Flags:         ff,
 	}
+}
+
+func (c *Config) Read() error {
+	// order of precedence for determining the source of operation context:
+	// 1. command line overrides via explicit flags (e.g. 'github-project' over profile[profile-name].github-project)
+	// 2. requested profile
+	// 3. default config file
+	// 4. defaults
+
+	tokenFile := ""
+
+	if c.Flags.ProfilesFile != "" && c.Flags.ProfileName != "" {
+		b, err := readProfiles(c.Flags.ProfilesFile)
+		if err != nil {
+			return err
+		}
+		reader := bytes.NewReader(b)
+
+		profiles, err := ReadProfiles(reader)
+		if err != nil {
+			return err
+		}
+		if c.Flags.ProfileName != "" {
+			profile := profiles.GetProfile(c.Flags.ProfileName)
+			if profile == nil {
+				return fmt.Errorf("profile %s not found", c.Flags.ProfileName)
+			}
+			c.GithubProject = profile.GithubConfig.Project
+			c.JiraProject = profile.JiraConfig.Project
+
+			tokenFile = profile.TokenStore
+			if tokenFile != "" {
+				c.Tokens, err = readTokens(tokenFile)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	if c.Flags.TokenFile != "" {
+		tokens, err := readTokens(c.Flags.TokenFile)
+		if err != nil {
+			return err
+		}
+		c.Tokens = tokens
+	}
+
+	if c.Flags.GithubProject != "" {
+		c.GithubProject = c.Flags.GithubProject
+	}
+
+	if c.Flags.JiraProject != "" {
+		c.JiraProject = c.Flags.JiraProject
+	}
+
 	return nil
 }
 
-func ReadFile(f string) (*Config, error) {
-	b, err := readFile(f)
+var readTokens = func(filename string) (*TokenPair, error) {
+	rawTokens, err := ReadTokenStore(filename)
 	if err != nil {
 		return nil, err
 	}
-
-	var c Config
-	err = yaml.Unmarshal(b, &c)
-	if err != nil {
-		return nil, err
-	}
-	if c.Schema != schemaName {
-		return nil, fmt.Errorf("invalid schema: %q should be %q: %v", c.Schema, schemaName, err)
-	}
-	if c.Tokens.GithubToken == "" {
-		return nil, errors.New("missing required github token")
-	}
-	if c.Tokens.JiraToken == "" {
-		return nil, errors.New("missing required jira token")
-	}
-
-	c.setDefaults()
-
-	return &c, nil
+	return &TokenPair{
+		GithubToken: rawTokens.Tokens.GithubToken,
+		JiraToken:   rawTokens.Tokens.JiraToken,
+	}, nil
 }
 
 // overrideable func for mocking os.ReadFile
-var readFile = func(file string) ([]byte, error) {
-	return os.ReadFile(file)
+var readProfiles = func(filename string) ([]byte, error) {
+	return os.ReadFile(filename)
 }

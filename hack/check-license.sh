@@ -5,7 +5,7 @@ set -o nounset
 set -o pipefail
 
 echo "Checking for license header..."
-allfiles=$(find . -name '*.go')
+allfiles=$(find . -name '*.go'| grep -Ev "^[ 	]*\./vendor")
 licRes=""
 for file in $allfiles; do
   if ! head -n3 "${file}" | grep -Eq "(Copyright|generated|GENERATED|Licensed)" ; then
