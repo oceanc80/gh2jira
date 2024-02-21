@@ -96,6 +96,10 @@ func (c *Config) Read() error {
 		c.JiraProject = c.Flags.JiraProject
 	}
 
+	if c.Flags.JiraBaseURL != "" {
+		c.JiraBaseUrl = c.Flags.JiraBaseURL
+	}
+
 	return nil
 }
 

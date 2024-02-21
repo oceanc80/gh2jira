@@ -22,6 +22,7 @@ type FlagFeeder struct {
 	TokenFile     string
 	GithubProject string
 	JiraProject   string
+	JiraBaseURL   string
 }
 
 func NewFlagFeeder(c *cobra.Command) (*FlagFeeder, error) {
@@ -45,6 +46,10 @@ func NewFlagFeeder(c *cobra.Command) (*FlagFeeder, error) {
 	if err != nil {
 		return nil, err
 	}
+	jiraBaseURL, err := c.Flags().GetString("jira-base-url")
+	if err != nil {
+		return nil, err
+	}
 
 	return &FlagFeeder{
 		ProfilesFile:  profilesFile,
@@ -52,5 +57,6 @@ func NewFlagFeeder(c *cobra.Command) (*FlagFeeder, error) {
 		TokenFile:     tokensFile,
 		GithubProject: githubProject,
 		JiraProject:   jiraProject,
+		JiraBaseURL:   jiraBaseURL,
 	}, nil
 }
