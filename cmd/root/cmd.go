@@ -23,6 +23,7 @@ import (
 
 const defaultTokensFile string = "tokenstore.yaml"
 const defaultProfilesFile string = "profiles.yaml"
+const defaultJiraBaseURL string = "https://issues.redhat.com/"
 
 var (
 	tokensFile   string
@@ -30,6 +31,7 @@ var (
 	profileName  string
 	ghProject    string
 	jProject     string
+	jUrl         string
 )
 
 func NewCmd() *cobra.Command {
@@ -49,6 +51,7 @@ func NewCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&profileName, "profile-name", "", "profile name to use (implies `profiles-file`)")
 	cmd.PersistentFlags().StringVar(&ghProject, "github-project", "", "Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk")
 	cmd.PersistentFlags().StringVar(&jProject, "jira-project", "", "Jira project if not using a profile, e.g.: OSDK")
+	cmd.PersistentFlags().StringVar(&jUrl, "jira-base-url", defaultJiraBaseURL, "Jira base URL, e.g.: https://issues.redhat.com")
 
 	return cmd
 }
