@@ -18,7 +18,9 @@ import (
 )
 
 // getIssues will query Jira API using the provided JQL string
-func (c *Connection) getIssues(jql string) ([]gojira.Issue, error) {
+func (c *Connection) GetIssues(jql string) ([]gojira.Issue, error) {
+
+	fmt.Printf("Querying Jira with JQL: %s\n", jql)
 
 	// lastIssue is the index of the last issue returned
 	lastIssue := 0
@@ -53,7 +55,11 @@ func (c *Connection) getIssues(jql string) ([]gojira.Issue, error) {
 
 	for _, i := range result {
 		fmt.Printf("%s (%s/%s): %+v -> %s\n", i.Key, i.Fields.Type.Name, i.Fields.Priority.Name, i.Fields.Summary, i.Fields.Status.Name)
-		fmt.Printf("Assignee : %v\n", i.Fields.Assignee.DisplayName)
+		if i.Fields.Assignee != nil {
+			fmt.Printf("Assignee : %v\n", i.Fields.Assignee.DisplayName)
+		} else {
+			fmt.Printf("Assignee : Unassigned\n")
+		}
 		fmt.Printf("Reporter: %v\n", i.Fields.Reporter.DisplayName)
 	}
 	return result, nil
