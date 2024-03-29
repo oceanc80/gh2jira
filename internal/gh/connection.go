@@ -17,7 +17,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v60/github"
 	"golang.org/x/oauth2"
 )
 
@@ -25,9 +25,9 @@ type ConnectionOption func(*Connection) error
 
 type Connection struct {
 	transport *http.Client
-	client   *github.Client
-	token  string
-	ctx    context.Context
+	client    *github.Client
+	token     string
+	ctx       context.Context
 }
 
 // for unit testing
@@ -90,4 +90,3 @@ func (c *Connection) Connect() error {
 
 	return nil
 }
-

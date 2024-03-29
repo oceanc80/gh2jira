@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	gojira "github.com/andygrunwald/go-jira"
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v60/github"
 )
 
 func getWebURL(url string) string {

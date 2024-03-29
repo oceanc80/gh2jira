@@ -1,10 +1,13 @@
 module github.com/oceanc80/gh2jira
 
-go 1.21.8
+go 1.21
+
+toolchain go1.21.8
 
 require (
 	github.com/andygrunwald/go-jira v1.16.0
 	github.com/google/go-github/v47 v47.0.1-0.20220915193316-d6115619cf61
+	github.com/google/go-github/v60 v60.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/migueleliasweb/go-github-mock v0.0.12
 	github.com/onsi/ginkgo v1.16.5
@@ -21,7 +24,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-github/v41 v41.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect

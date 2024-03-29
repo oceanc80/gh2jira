@@ -15,7 +15,7 @@ package gh
 import (
 	"fmt"
 
-	"github.com/google/go-github/v47/github"
+	"github.com/google/go-github/v60/github"
 )
 
 const unassigned_issue string = "unassigned"
