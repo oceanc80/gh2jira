@@ -1,4 +1,4 @@
-module github.com/jmrodri/gh2jira
+module github.com/oceanc80/gh2jira
 
 go 1.20
 

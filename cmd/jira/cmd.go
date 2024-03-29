@@ -9,33 +9,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-package mock
+package jira
 
 import (
-	"encoding/json"
-	"errors"
-	"net/http"
+	"github.com/spf13/cobra"
+
+	"github.com/oceanc80/gh2jira/cmd/jira/list"
 )
 
-// MustMarshal helper function that wraps json.Marshal
-func MustMarshal(v interface{}) []byte {
-	b, err := json.Marshal(v)
-
-	if err == nil {
-		return b
+func NewCmd() *cobra.Command {
+	runCmd := &cobra.Command{
+		Use:   "jira",
+		Short: "Run a jira subcommand",
+		Args:  cobra.NoArgs,
+		Run:   func(_ *cobra.Command, _ []string) {}, // adding an empty function here to preserve non-zero exit status for misstated subcommands/flags for the command hierarchy
 	}
 
-	panic(err)
-}
+	runCmd.AddCommand(list.NewCmd())
 
-// WriteError helper function to write errors to HTTP handlers
-func WriteError(
-	w http.ResponseWriter,
-	httpStatus int,
-	msg string,
-) {
-	w.WriteHeader(httpStatus)
-
-	w.Write(MustMarshal(errors.New(msg)))
+	return runCmd
 }
