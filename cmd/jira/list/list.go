@@ -15,9 +15,9 @@ package list
 import (
 	"fmt"
 
-	"github.com/jmrodri/gh2jira/internal/config"
-	"github.com/jmrodri/gh2jira/internal/jira"
-	"github.com/jmrodri/gh2jira/pkg/util"
+	"github.com/oceanc80/gh2jira/internal/config"
+	"github.com/oceanc80/gh2jira/internal/jira"
+	"github.com/oceanc80/gh2jira/pkg/util"
 	"github.com/spf13/cobra"
 )
 
@@ -25,11 +25,11 @@ var (
 	query string
 )
 
-func NewJiraListerCmd() *cobra.Command {
+func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list-jira",
-		Short: "List Jira issues",
-		Long:  "List Jira issues filtered by assignee, label, or project",
+		Use:   "list",
+		Short: "List open Jira issues",
+		Long:  "List open Jira issues filtered with optional additional JQL",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ff, err := util.NewFlagFeeder(cmd)
 			if err != nil {
@@ -65,6 +65,7 @@ func NewJiraListerCmd() *cobra.Command {
 			default:
 				jql = query
 			}
+			jql += " and status != Closed"
 
 			_, err = jc.GetIssues(jql)
 			if err != nil {

@@ -1,13 +1,15 @@
 # gh2jira
+(Forked from https://github.com/jmrodri/gh2jira)
+
 
 Build Status:
-[![Build Status][actions-img]](https://github.com/jmrodri/gh2jira/actions)
+[![Build Status][actions-img]](https://github.com/oceanc80/gh2jira/actions)
 License:
 [![License](http://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 Code coverage:
-[![coveralls][coveralls-img]](https://coveralls.io/github/jmrodri/gh2jira?branch=main)
+[![coveralls][coveralls-img]](https://coveralls.io/github/oceanc80/gh2jira?branch=main)
 
-A utility that allows you to copy a Github issue to Jira
+A utility that allows you to retrieve and reconcile relationships between Github and Jira issues
 
 ## Getting Started
 ### TokenStore Setup
@@ -52,13 +54,11 @@ profiles:
 Run `make` from the root of the directory.
 
 ## Usage
-There are 2 main subcommands: `list` & `clone`. The `list` subcommand will
-display all open github issues of the given project. The `clone` subcommand will
-copy the given Github issue to your Jira instance.
+Subcommands are collected into github- or jira-specific groupings as appropriate with the same verb used for consistency. For clarity we'll refer to commands which independently exist for either/both domain (github or jira) as domain-specific commands.  Commands which exist outside or across those domains will be referred to as domain-agnostic commands.
 
 ```
 $ ./gh2jira --help
-github to jira issue cloner
+github <--> jira issue reconciler
 
 Usage:
   gh2jira [flags]
@@ -67,17 +67,18 @@ Usage:
 Available Commands:
   clone       Clone given Github issues to Jira
   completion  Generate the autocompletion script for the specified shell
+  github      Run a github subcommand
   help        Help about any command
-  list        List Github issues
+  jira        Run a jira subcommand
 
 Flags:
-      --github-project string        Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
-  -h, --help                         help for gh2jira
-      --jira-base-url string         Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
-      --jira-project string          Jira project if not using a profile, e.g.: OSDK
-      --profile-name profiles-file   profile name to use (implies profiles-file)
-      --profiles-file string         filename containing optional profile attributes (default "profiles.yaml")
-      --token-file string            file containing authentication tokens, if different than profile (default "tokenstore.yaml")
+      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
+  -h, --help                    help for gh2jira
+      --jira-base-url string    Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
+      --jira-project string     Jira project if not using a profile, e.g.: OCPBUGS
+      --profile-name string     profile name to use (implies profiles-file)
+      --profiles-file string    filename containing optional profile attributes (default "profiles.yaml")
+      --token-file string       file containing authentication tokens, if different than profile (default "tokenstore.yaml")
 
 Use "gh2jira [command] --help" for more information about a command.
 ```
@@ -86,15 +87,17 @@ Use "gh2jira [command] --help" for more information about a command.
 Since command flags can be provided via multiple mechanisms, it's necessary to establish a precedence for deterministic override.
 
 gh2jira follows this precedence order:
-1. specified by specific flag
-2. specified by requested profile
-3. default values for options
+1. flags specified by specific options
+2. flags specified by requested profile
+3. default values for flags
 
 For example, a user may use a profile name for a clone command but also want to override the target jira project for the creation.
 Or the user may need to supply a different TokenStore file for a particular operation.
 
+### Domain-specific subcommands
 
-### `list` subcommand
+#### `github` subcommands
+##### `list` subcommand
 
 The `list` subcommand will display all open github issues of the given project.
 You can filter the list by milestone, assignee and/or labels.
@@ -108,11 +111,11 @@ The `--milestone` flag requires the milestone ID. So click on your Github
 Milestones tab and look at the ID in the URL, use that.
 
 ```
-$ ./gh2jira list --help
+$ ./gh2jira github list -h
 List Github issues filtered by milestone, assignee, or label
 
 Usage:
-  gh2jira list [flags]
+  gh2jira github list [flags]
 
 Flags:
       --assignee string    username assigned the issue
@@ -121,15 +124,43 @@ Flags:
       --milestone string   the milestone ID from the url, not the display name
 
 Global Flags:
-      --github-project string        Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
-      --jira-base-url string         Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
-      --jira-project string          Jira project if not using a profile, e.g.: OSDK
-      --profile-name profiles-file   profile name to use (implies profiles-file)
-      --profiles-file string         filename containing optional profile attributes (default "profiles.yaml")
-      --token-file string            file containing authentication tokens, if different than profile (default "tokenstore.yaml")
+      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
+      --jira-base-url string    Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
+      --jira-project string     Jira project if not using a profile, e.g.: OCPBUGS
+      --profile-name string     profile name to use (implies profiles-file)
+      --profiles-file string    filename containing optional profile attributes (default "profiles.yaml")
+      --token-file string       file containing authentication tokens, if different than profile (default "tokenstore.yaml")
 ```
 
-### `clone` subcommand
+#### `jira` subcommands
+##### `list` subcommand
+
+The `list` subcommand will display all open jira issues of the specified project.
+
+You can specify an additional JQL query string to be ANDed with the existing issue query.
+
+```
+$ ./gh2jira jira list -h
+List open Jira issues filtered with optional additional JQL
+
+Usage:
+  gh2jira jira list [flags]
+
+Flags:
+  -h, --help           help for list
+      --query string   Jira query (if provided, ANDed with project)
+
+Global Flags:
+      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
+      --jira-base-url string    Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
+      --jira-project string     Jira project if not using a profile, e.g.: OCPBUGS
+      --profile-name string     profile name to use (implies profiles-file)
+      --profiles-file string    filename containing optional profile attributes (default "profiles.yaml")
+      --token-file string       file containing authentication tokens, if different than profile (default "tokenstore.yaml")
+```
+
+### Domain-agnostic subcommands
+#### `clone` subcommand
 
 The `clone` subcommand will copy the given Github issue to your Jira instance.
 *WARNING!* This will write to your Jira instance, consider using the `--dryrun`
@@ -150,13 +181,13 @@ Flags:
   -h, --help     help for clone
 
 Global Flags:
-      --github-project string        Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
-      --jira-base-url string         Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
-      --jira-project string          Jira project if not using a profile, e.g.: OSDK
-      --profile-name profiles-file   profile name to use (implies profiles-file)
-      --profiles-file string         filename containing optional profile attributes (default "profiles.yaml")
-      --token-file string            file containing authentication tokens, if different than profile (default "tokenstore.yaml")
+      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
+      --jira-base-url string    Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
+      --jira-project string     Jira project if not using a profile, e.g.: OCPBUGS
+      --profile-name string     profile name to use (implies profiles-file)
+      --profiles-file string    filename containing optional profile attributes (default "profiles.yaml")
+      --token-file string       file containing authentication tokens, if different than profile (default "tokenstore.yaml")
 ```
 
-[actions-img]: https://github.com/jmrodri/gh2jira/workflows/unit/badge.svg
-[coveralls-img]: https://coveralls.io/repos/github/jmrodri/gh2jira/badge.svg?branch=main
+[actions-img]: https://github.com/oceanc80/gh2jira/workflows/unit/badge.svg
+[coveralls-img]: https://coveralls.io/repos/github/oceanc80/gh2jira/badge.svg?branch=main

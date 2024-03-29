@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jmrodri/gh2jira/pkg/util"
+	"github.com/oceanc80/gh2jira/pkg/util"
 )
 
 const defaultJiraBaseURL string = "https://issues.redhat.com/"
