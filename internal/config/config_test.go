@@ -15,8 +15,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/oceanc80/gh2jira/pkg/util"
 	"github.com/stretchr/testify/require"
+
+	"github.com/oceanc80/gh2jira/pkg/util"
 )
 
 var (

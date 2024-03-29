@@ -22,13 +22,18 @@ import (
 	"github.com/google/go-github/v60/github"
 )
 
-func getWebURL(url string) string {
-	// https://api.github.com/repos/operator-framework/operator-sdk/issues/3447
-	// https://github.com/operator-framework/operator-sdk/issues/3447
+// getDomainFromIssueUrl extracts the github domain from the issue HTML URL
+// assumes that the suffix is in the format "/domain/project/issues/123"
+// splits the string on "/", pops off the last two elements, pops off the front up to the domain element, and returns the joined remaining elements
+func getDomainFromIssueUrl(url string) string {
 	if url == "" {
-		return url
+		return ""
 	}
-	return strings.Replace(strings.Replace(url, "api.github.com", "github.com", 1), "repos/", "", 1)
+
+	parts := strings.Split(url, "/")
+	parts = parts[:len(parts)-2]
+	parts = parts[len(parts)-2:]
+	return strings.Join(parts, "/")
 }
 
 func (conn *Connection) Clone(fromIssue *github.Issue, project string, dryRun bool) (*gojira.Issue, error) {
@@ -67,6 +72,9 @@ func (conn *Connection) Clone(fromIssue *github.Issue, project string, dryRun bo
 		fmt.Printf("Type: %s\n", ji.Fields.Type.Name)
 		fmt.Println("Description:")
 		fmt.Printf("%s\n", ji.Fields.Description)
+		fmt.Printf("Domain: %s\n", getDomainFromIssueUrl(fromIssue.GetHTMLURL()))
+		// b, _ := json.MarshalIndent(*fromIssue, "", "  ")
+		// fmt.Printf("issue details: %s\n", b)
 		fmt.Println("\n############# DRY RUN MODE #############")
 	} else {
 		fmt.Printf("Cloning issue #%d to jira project board: %s\n\n", fromIssue.GetNumber(), ji.Fields.Project.Key)
@@ -89,8 +97,8 @@ func (conn *Connection) Clone(fromIssue *github.Issue, project string, dryRun bo
 		// Add remote link to the upstream issue
 		if _, _, err = conn.client.Issue.AddRemoteLink(daIssue.ID, &gojira.RemoteLink{
 			Object: &gojira.RemoteLinkObject{
-				URL:   getWebURL(fromIssue.GetURL()),
-				Title: fmt.Sprintf("Upstream Issue #%v", fromIssue.GetNumber()),
+				URL:   fromIssue.GetHTMLURL(),
+				Title: fmt.Sprintf("%s#%v", getDomainFromIssueUrl(fromIssue.GetHTMLURL()), fromIssue.GetNumber()),
 			},
 		}); err != nil {
 			return nil, err

@@ -18,7 +18,6 @@ import (
 	"os"
 
 	"github.com/google/go-github/v60/github"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

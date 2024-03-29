@@ -12,8 +12,9 @@
 package github
 
 import (
-	"github.com/oceanc80/gh2jira/cmd/github/list"
 	"github.com/spf13/cobra"
+
+	"github.com/oceanc80/gh2jira/cmd/github/list"
 )
 
 func NewCmd() *cobra.Command {
