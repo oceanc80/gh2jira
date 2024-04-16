@@ -17,8 +17,8 @@ import (
 	gojira "github.com/andygrunwald/go-jira"
 )
 
-// getIssues will query Jira API using the provided JQL string
-func (c *Connection) GetIssues(jql string) ([]gojira.Issue, error) {
+// SearchIssues will query Jira API using the provided JQL string
+func (c *Connection) SearchIssues(jql string) ([]gojira.Issue, error) {
 
 	fmt.Printf("Querying Jira with JQL: %s\n", jql)
 
@@ -32,7 +32,7 @@ func (c *Connection) GetIssues(jql string) ([]gojira.Issue, error) {
 			MaxResults: 1000,      // Max amount
 			StartAt:    lastIssue, // Make sure we start grabbing issues from last checkpoint
 		}
-		issues, resp, err := c.client.Issue.Search(jql, opt)
+		issues, resp, err := c.Client.Issue.Search(jql, opt)
 		if err != nil {
 			return nil, err
 		}
@@ -53,14 +53,5 @@ func (c *Connection) GetIssues(jql string) ([]gojira.Issue, error) {
 		}
 	}
 
-	for _, i := range result {
-		fmt.Printf("%s (%s/%s): %+v -> %s\n", i.Key, i.Fields.Type.Name, i.Fields.Priority.Name, i.Fields.Summary, i.Fields.Status.Name)
-		if i.Fields.Assignee != nil {
-			fmt.Printf("Assignee : %v\n", i.Fields.Assignee.DisplayName)
-		} else {
-			fmt.Printf("Assignee : Unassigned\n")
-		}
-		fmt.Printf("Reporter: %v\n", i.Fields.Reporter.DisplayName)
-	}
 	return result, nil
 }

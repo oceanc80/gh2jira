@@ -9,6 +9,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package jira
 
 import (
@@ -21,7 +22,7 @@ type ConnectionOption func(*Connection) error
 
 type Connection struct {
 	transport *gojira.BearerAuthTransport
-	client    *gojira.Client
+	Client    *gojira.Client
 	token     string
 	baseUri   string
 }
@@ -64,7 +65,7 @@ func (c *Connection) Connect() error {
 	if c.transport == nil {
 		return errors.New("transport is not set")
 	}
-	if c.client == nil {
+	if c.Client == nil {
 		gc, err := gojira.NewClient(c.transport.Client(), c.baseUri)
 		if err != nil {
 			return err
@@ -72,7 +73,7 @@ func (c *Connection) Connect() error {
 		if gc == nil {
 			return errors.New("unable to create github client")
 		}
-		c.client = gc
+		c.Client = gc
 	}
 	return nil
 }

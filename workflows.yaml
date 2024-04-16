@@ -1,0 +1,11 @@
+schema: gh2jira.workflows
+name: jira
+mappings:
+  - ghstate: "open"
+    jstates:
+      - "To Do"
+      - "In Progress"
+      - "New"
+  - ghstate: "closed"
+    jstates:
+      - "Done"

@@ -37,7 +37,7 @@ func getDomainFromIssueUrl(url string) string {
 }
 
 func (conn *Connection) Clone(fromIssue *github.Issue, project string, dryRun bool) (*gojira.Issue, error) {
-	if conn.client == nil {
+	if conn.Client == nil {
 		// user attempted operation w/o connecting to remote first
 		if err := conn.Connect(); err != nil {
 			return nil, err
@@ -80,7 +80,7 @@ func (conn *Connection) Clone(fromIssue *github.Issue, project string, dryRun bo
 		fmt.Printf("Cloning issue #%d to jira project board: %s\n\n", fromIssue.GetNumber(), ji.Fields.Project.Key)
 		var err error
 
-		daIssue, response, err := conn.client.Issue.Create(&ji)
+		daIssue, response, err := conn.Client.Issue.Create(&ji)
 		if err != nil {
 			fmt.Printf("Error cloning issue: %v\n", err)
 			reqBody, ioerr := io.ReadAll(response.Response.Body)
@@ -95,7 +95,7 @@ func (conn *Connection) Clone(fromIssue *github.Issue, project string, dryRun bo
 				fmt.Sprintf(filepath.Join(conn.baseUri, "browse/%s"), daIssue.Key))
 		}
 		// Add remote link to the upstream issue
-		if _, _, err = conn.client.Issue.AddRemoteLink(daIssue.ID, &gojira.RemoteLink{
+		if _, _, err = conn.Client.Issue.AddRemoteLink(daIssue.ID, &gojira.RemoteLink{
 			Object: &gojira.RemoteLinkObject{
 				URL:   fromIssue.GetHTMLURL(),
 				Title: fmt.Sprintf("%s#%v", getDomainFromIssueUrl(fromIssue.GetHTMLURL()), fromIssue.GetNumber()),
