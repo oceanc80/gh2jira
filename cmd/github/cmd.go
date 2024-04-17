@@ -13,6 +13,7 @@ package github
 
 import (
 	"github.com/spf13/cobra"
+
 	"github.com/oceanc80/gh2jira/cmd/github/list"
 )
 

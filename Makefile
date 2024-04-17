@@ -26,11 +26,19 @@ unit:
 vet:
 	$(GO) vet ./...
 
+.PHONY: fmt
+fmt:
+	$(GO) fmt ./...
+
 .PHONY: lint
 lint:
-	find . -name '*.go' | xargs goimports -w
+	find . -type f -name '*.go' | xargs gosimports -w -local $(shell go list -m)
 
 .PHONY: clean
 clean:
 	@rm -rf $(OBJ) coverage.out
+
+.PHONY: sanity
+sanity: fmt vet lint
+	git diff --exit-code
 

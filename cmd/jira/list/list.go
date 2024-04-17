@@ -15,10 +15,12 @@ package list
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+
+	gojira "github.com/andygrunwald/go-jira"
 	"github.com/oceanc80/gh2jira/internal/config"
 	"github.com/oceanc80/gh2jira/internal/jira"
 	"github.com/oceanc80/gh2jira/pkg/util"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -67,9 +69,19 @@ func NewCmd() *cobra.Command {
 			}
 			jql += " and status != Closed"
 
-			_, err = jc.GetIssues(jql)
+			var result []gojira.Issue
+			result, err = jc.SearchIssues(jql)
 			if err != nil {
 				return err
+			}
+			for _, i := range result {
+				fmt.Printf("%s (%s/%s): %+v -> %s\n", i.Key, i.Fields.Type.Name, i.Fields.Priority.Name, i.Fields.Summary, i.Fields.Status.Name)
+				if i.Fields.Assignee != nil {
+					fmt.Printf("Assignee : %v\n", i.Fields.Assignee.DisplayName)
+				} else {
+					fmt.Printf("Assignee : Unassigned\n")
+				}
+				fmt.Printf("Reporter: %v\n", i.Fields.Reporter.DisplayName)
 			}
 
 			return nil
