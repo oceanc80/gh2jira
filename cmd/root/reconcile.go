@@ -12,7 +12,9 @@
 package root
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/oceanc80/gh2jira/internal/config"
 	"github.com/oceanc80/gh2jira/internal/gh"
@@ -20,6 +22,17 @@ import (
 	"github.com/oceanc80/gh2jira/internal/reconcile"
 	"github.com/oceanc80/gh2jira/pkg/util"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
+)
+
+var porcelain bool
+var output string = "json"
+
+const (
+	greenStart  string = "\033[32m"
+	yellowStart string = "\033[33m"
+	redStart    string = "\033[31m"
+	colorReset  string = "\033[0m"
 )
 
 func NewReconcileCmd() *cobra.Command {
@@ -53,6 +66,10 @@ func NewReconcileCmd() *cobra.Command {
 				return err
 			}
 
+			if output != "yaml" && output != "json" {
+				return fmt.Errorf("invalid output format %q (accepted formats are 'yaml', 'json')", output)
+			}
+
 			jc, err := jira.NewConnection(
 				jira.WithBaseURI(config.JiraBaseUrl),
 				jira.WithAuthToken(config.Tokens.JiraToken),
@@ -66,14 +83,44 @@ func NewReconcileCmd() *cobra.Command {
 				return err
 			}
 
-			err = reconcile.Reconcile(cmd.Context(), jql, jc, gc)
+			results, err := reconcile.Reconcile(cmd.Context(), jql, jc, gc)
 			if err != nil {
 				return err
+			}
+
+			if porcelain {
+				b, _ := json.MarshalIndent(results, "", "  ")
+				if output == "json" {
+					fmt.Println(string(b))
+				} else {
+					yamlData, err := yaml.JSONToYAML(b)
+					if err != nil {
+						return err
+					}
+					yamlData = append([]byte("---\n"), yamlData...)
+					_, err = os.Stdout.Write(yamlData)
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				for _, pair := range results {
+					if pair.Result == reconcile.ResultMatch {
+						fmt.Printf("%s%s/(%s)%s status (g: %q\tj: %q)\t%sMATCH%s\n",
+							yellowStart, pair.Jira.Name, pair.Git.Name, colorReset, pair.Git.Status, pair.Jira.Status, greenStart, colorReset)
+					} else {
+						fmt.Printf("%s%s/(%s)%s status (g: %q,\tj: %q)\t%sMISMATCH%s\n",
+							yellowStart, pair.Jira.Name, pair.Git.Name, colorReset, pair.Git.Status, pair.Jira.Status, redStart, colorReset)
+					}
+				}
 			}
 
 			return nil
 		},
 	}
+
+	runCmd.Flags().BoolVar(&porcelain, "porcelain", false, "display output in an easy-to-parse format for scripts")
+	runCmd.Flags().StringVarP(&output, "output", "o", "json", "output format for porcelain display (json or yaml)")
 
 	return runCmd
 }

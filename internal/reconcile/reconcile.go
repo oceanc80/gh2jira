@@ -26,25 +26,42 @@ import (
 	"github.com/oceanc80/gh2jira/internal/workflow"
 )
 
-const greenStart string = "\033[32m"
-const yellowStart string = "\033[33m"
-const redStart string = "\033[31m"
-const colorReset string = "\033[0m"
+type Result string
 
-func Reconcile(ctx context.Context, jql string, jc *jira.Connection, gc *gh.Connection) error {
+type IssueStatus struct {
+	Name   string
+	Status string
+}
+
+type PairResult struct {
+	Jira   IssueStatus
+	Git    IssueStatus
+	Result Result
+}
+
+type PairResults []PairResult
+
+const (
+	ResultMatch    Result = "MATCH"
+	ResultMismatch Result = "MISMATCH"
+)
+
+func Reconcile(ctx context.Context, jql string, jc *jira.Connection, gc *gh.Connection) (PairResults, error) {
+	results := make(PairResults, 0)
+
 	if jc == nil || gc == nil {
-		return errors.New("nil connection")
+		return nil, errors.New("nil connection")
 	}
 
 	// compile a regex to match github issue URLs
 	r, err := regexp.Compile(".*/github.com/.*/issues/([0-9]+)")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	jiraIssues, err := jc.SearchIssues(jql)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// reduce the list to just those jira which have a github issue link
@@ -70,7 +87,7 @@ func Reconcile(ctx context.Context, jql string, jc *jira.Connection, gc *gh.Conn
 
 	err = workflow.ReadWorkflows()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// eval status of each jira and linked github issues for mismatch
@@ -78,37 +95,41 @@ func Reconcile(ctx context.Context, jql string, jc *jira.Connection, gc *gh.Conn
 		jstat := ji.Fields.Status.Name
 		rlinks, response, err := jc.Client.Issue.GetRemoteLinksWithContext(ctx, ji.Key)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer response.Body.Close()
 		for _, rlink := range *rlinks {
 			if r.MatchString(rlink.Object.URL) {
 				project, issue, err := splitIssueRef(rlink.Object.URL)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				// fmt.Printf("\tproject %q issue #%d\n", project, issue)
 				gi, err := gc.GetIssue(issue, gh.WithProject(project))
 				if err != nil {
-					return err
+					return nil, err
 				}
 				stateMatch, err := workflow.ValidateState(gi.GetState(), jstat)
 				if err != nil {
-					return err
+					return nil, err
 				}
+				var match Result
 				if stateMatch {
-					fmt.Printf("%s%s/(%s/%d)%s status (g: %q\tj: %q)\t%sMATCH%s\n",
-						yellowStart, ji.Key, project, gi.GetNumber(), colorReset, gi.GetState(), jstat, greenStart, colorReset)
+					match = ResultMatch
 				} else {
-					fmt.Printf("%s%s/(%s/%d)%s status (g: %q,\tj: %q)\t%sMISMATCH%s\n",
-						yellowStart, ji.Key, project, gi.GetNumber(), colorReset, gi.GetState(), jstat, redStart, colorReset)
+					match = ResultMismatch
 				}
-				// fmt.Printf("\tgithub issue #%d status %v\n", gi.GetNumber(), gi.GetState())
+				pair := PairResult{
+					Jira:   IssueStatus{Name: ji.Key, Status: jstat},
+					Git:    IssueStatus{Name: fmt.Sprintf("%s/%d", project, gi.GetNumber()), Status: gi.GetState()},
+					Result: match,
+				}
+				results = append(results, pair)
 			}
 		}
 	}
 
-	return nil
+	return results, nil
 }
 
 func splitIssueRef(ref string) (string, int, error) {
