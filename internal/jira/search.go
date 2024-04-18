@@ -12,15 +12,13 @@
 package jira
 
 import (
-	"fmt"
-
 	gojira "github.com/andygrunwald/go-jira"
 )
 
 // SearchIssues will query Jira API using the provided JQL string
 func (c *Connection) SearchIssues(jql string) ([]gojira.Issue, error) {
 
-	fmt.Printf("Querying Jira with JQL: %s\n", jql)
+	// fmt.Printf("Querying Jira with JQL: %s\n", jql)
 
 	// lastIssue is the index of the last issue returned
 	lastIssue := 0
