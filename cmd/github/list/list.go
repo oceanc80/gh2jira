@@ -15,8 +15,8 @@ package list
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/oceanc80/gh2jira/internal/config"
-	"github.com/oceanc80/gh2jira/internal/gh"
+	"github.com/oceanc80/gh2jira/pkg/config"
+	"github.com/oceanc80/gh2jira/pkg/gh"
 	"github.com/oceanc80/gh2jira/pkg/util"
 )
 
