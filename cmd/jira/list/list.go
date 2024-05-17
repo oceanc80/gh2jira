@@ -18,8 +18,8 @@ import (
 	"github.com/spf13/cobra"
 
 	gojira "github.com/andygrunwald/go-jira"
-	"github.com/oceanc80/gh2jira/internal/config"
-	"github.com/oceanc80/gh2jira/internal/jira"
+	"github.com/oceanc80/gh2jira/pkg/config"
+	"github.com/oceanc80/gh2jira/pkg/jira"
 	"github.com/oceanc80/gh2jira/pkg/util"
 )
 

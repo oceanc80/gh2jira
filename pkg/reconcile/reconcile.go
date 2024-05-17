@@ -21,9 +21,9 @@ import (
 	"strings"
 
 	gojira "github.com/andygrunwald/go-jira"
-	"github.com/oceanc80/gh2jira/internal/gh"
-	"github.com/oceanc80/gh2jira/internal/jira"
-	"github.com/oceanc80/gh2jira/internal/workflow"
+	"github.com/oceanc80/gh2jira/pkg/gh"
+	"github.com/oceanc80/gh2jira/pkg/jira"
+	"github.com/oceanc80/gh2jira/pkg/workflow"
 )
 
 type Result string
