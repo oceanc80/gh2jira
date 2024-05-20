@@ -26,28 +26,33 @@ import (
 	"github.com/oceanc80/gh2jira/pkg/workflow"
 )
 
-type Result string
+type Outcome string
 
 type IssueStatus struct {
-	Name   string
-	Status string
+	Name   string `json:"name"`
+	Status string `json:"status"`
 }
 
 type PairResult struct {
-	Jira   IssueStatus
-	Git    IssueStatus
-	Result Result
+	Jira    IssueStatus `json:"jira"`
+	Git     IssueStatus `json:"github"`
+	Outcome Outcome     `json:"outcome"`
 }
 
 type PairResults []PairResult
+type TypeResults struct {
+	Results PairResults `json:"results"`
+}
 
 const (
-	ResultMatch    Result = "MATCH"
-	ResultMismatch Result = "MISMATCH"
+	OutcomeMatch    Outcome = "MATCH"
+	OutcomeMismatch Outcome = "MISMATCH"
 )
 
-func Reconcile(ctx context.Context, jql string, jc *jira.Connection, gc *gh.Connection) (PairResults, error) {
-	results := make(PairResults, 0)
+func Reconcile(ctx context.Context, jql string, jc *jira.Connection, gc *gh.Connection) (*TypeResults, error) {
+	results := &TypeResults{
+		Results: make(PairResults, 0),
+	}
 
 	if jc == nil || gc == nil {
 		return nil, errors.New("nil connection")
@@ -113,18 +118,18 @@ func Reconcile(ctx context.Context, jql string, jc *jira.Connection, gc *gh.Conn
 				if err != nil {
 					return nil, err
 				}
-				var match Result
+				var match Outcome
 				if stateMatch {
-					match = ResultMatch
+					match = OutcomeMatch
 				} else {
-					match = ResultMismatch
+					match = OutcomeMismatch
 				}
 				pair := PairResult{
-					Jira:   IssueStatus{Name: ji.Key, Status: jstat},
-					Git:    IssueStatus{Name: fmt.Sprintf("%s/%d", project, gi.GetNumber()), Status: gi.GetState()},
-					Result: match,
+					Jira:    IssueStatus{Name: ji.Key, Status: jstat},
+					Git:     IssueStatus{Name: fmt.Sprintf("%s/%d", project, gi.GetNumber()), Status: gi.GetState()},
+					Outcome: match,
 				}
-				results = append(results, pair)
+				results.Results = append(results.Results, pair)
 			}
 		}
 	}

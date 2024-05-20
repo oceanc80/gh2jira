@@ -104,8 +104,14 @@ func NewReconcileCmd() *cobra.Command {
 					}
 				}
 			} else {
-				for _, pair := range results {
-					if pair.Result == reconcile.ResultMatch {
+				if len(results.Results) == 0 {
+					fmt.Println("no issues found")
+				} else {
+					fmt.Printf("found %d issues\n", len(results.Results))
+				}
+
+				for _, pair := range results.Results {
+					if pair.Outcome == reconcile.OutcomeMatch {
 						fmt.Printf("%s%s/(%s)%s status (g: %q\tj: %q)\t%sMATCH%s\n",
 							yellowStart, pair.Jira.Name, pair.Git.Name, colorReset, pair.Git.Status, pair.Jira.Status, greenStart, colorReset)
 					} else {

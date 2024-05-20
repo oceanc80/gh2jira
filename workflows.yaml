@@ -6,6 +6,7 @@ mappings:
       - "To Do"
       - "In Progress"
       - "New"
+      - "Code Review"
   - ghstate: "closed"
     jstates:
       - "Done"
