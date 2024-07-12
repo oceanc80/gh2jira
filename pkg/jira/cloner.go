@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	gojira "github.com/andygrunwald/go-jira"
@@ -36,12 +37,64 @@ func getDomainFromIssueUrl(url string) string {
 	return strings.Join(parts, "/")
 }
 
+func getIssueNumberFromIssueUrl(url string) string {
+	if url == "" {
+		return ""
+	}
+
+	parts := strings.Split(url, "/")
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return parts[len(parts)-1]
+}
+
+// expandDescription expands checklist links to other issues to jira link format
+// assumes the input checklist lines have the format "- [ ] #123"
+// replaces those lines in the general format " * [domain/project/issues/123|url]"
+// makes a special effort to preserve any trailing text after the issue number
+func expandDescription(body, url string) (string, error) {
+	lines := strings.Split(strings.ReplaceAll(body, "\r\n", "\n"), "\n")
+	var out []string
+
+	matcher := regexp.MustCompile(`^- \[ \] #[0-9]+`)
+
+	for _, line := range lines {
+		if matcher.FindStringIndex(line) != nil {
+			// extract the linked issue number
+			parts := strings.Split(line, "#")
+			elements := strings.Split(parts[1], " ")
+			issue := elements[0]
+			// grab any trailing text after the issue number
+			var trailer string
+			if len(elements) > 1 {
+				trailer = strings.Join(elements[1:], " ")
+			}
+			out = append(out,
+				fmt.Sprintf(" * [%s|%s] %s",
+					fmt.Sprintf("%s#%s", getDomainFromIssueUrl(url), issue),
+					strings.Replace(url, getIssueNumberFromIssueUrl(url), issue, -1),
+					trailer))
+		} else {
+			out = append(out, line)
+		}
+	}
+
+	return strings.Join(out, "\n"), nil
+}
+
 func (conn *Connection) Clone(fromIssue *github.Issue, project string, dryRun bool) (*gojira.Issue, error) {
 	if conn.Client == nil {
 		// user attempted operation w/o connecting to remote first
 		if err := conn.Connect(); err != nil {
 			return nil, err
 		}
+	}
+
+	description, err := expandDescription(fromIssue.GetBody(), fromIssue.GetHTMLURL())
+	if err != nil {
+		return nil, err
 	}
 
 	ji := gojira.Issue{
@@ -52,7 +105,7 @@ func (conn *Connection) Clone(fromIssue *github.Issue, project string, dryRun bo
 			// Reporter: &gojira.User{
 			//     Name: "youruser",
 			// },
-			Description: fromIssue.GetBody(),
+			Description: description,
 			Type: gojira.IssueType{
 				Name: "Story",
 			},
