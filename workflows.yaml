@@ -10,3 +10,4 @@ mappings:
   - ghstate: "closed"
     jstates:
       - "Done"
+      - "Dev Complete"
