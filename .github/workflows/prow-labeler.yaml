@@ -1,3 +1,5 @@
+# auto-apply labels based on configuration
+# in $root/.github/labeler.yml
 name: "Pull Request Labeler"
 on:
 - pull_request_target
