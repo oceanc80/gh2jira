@@ -104,20 +104,23 @@ func NewReconcileCmd() *cobra.Command {
 					}
 				}
 			} else {
-				if len(results.Results) == 0 {
+				if len(results.Matches) == 0 && len(results.Mismatches) == 0 {
 					fmt.Println("no issues found")
 				} else {
-					fmt.Printf("found %d issues\n", len(results.Results))
+					fmt.Printf("found %v mismatch / %v match issues\n", len(results.Mismatches), len(results.Matches))
 				}
 
-				for _, pair := range results.Results {
-					if pair.Outcome == reconcile.OutcomeMatch {
-						fmt.Printf("%s%s/(%s)%s status (g: %q\tj: %q)\t%sMATCH%s\n",
-							yellowStart, pair.Jira.Name, pair.Git.Name, colorReset, pair.Git.Status, pair.Jira.Status, greenStart, colorReset)
-					} else {
-						fmt.Printf("%s%s/(%s)%s status (g: %q,\tj: %q)\t%sMISMATCH%s\n",
-							yellowStart, pair.Jira.Name, pair.Git.Name, colorReset, pair.Git.Status, pair.Jira.Status, redStart, colorReset)
-					}
+				for _, pair := range results.Mismatches {
+					var result string = "MISMATCH"
+					var resultColor string = redStart
+					fmt.Printf("%s%s|(%s)%s\n\tstatus (%q\t| %q)\t%s%s%s assignees(%q\t| %q)\n",
+						yellowStart, pair.Jira.Name, pair.Git.Name, colorReset, pair.Jira.Status, pair.Git.Status, resultColor, result, colorReset, pair.Jira.Assignee, pair.Git.Assignee)
+				}
+				for _, pair := range results.Matches {
+					var result string = "MATCH"
+					var resultColor string = greenStart
+					fmt.Printf("%s%s|(%s)%s\n\tstatus (%q\t| %q)\t%s%s%s assignees(%q\t| %q)\n",
+						yellowStart, pair.Jira.Name, pair.Git.Name, colorReset, pair.Jira.Status, pair.Git.Status, resultColor, result, colorReset, pair.Jira.Assignee, pair.Git.Assignee)
 				}
 			}
 

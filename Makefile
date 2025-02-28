@@ -10,13 +10,13 @@ space := $(null) #
 comma := ,
 
 .PHONY: all
-all: clean unit build
+all: unit build
 
 $(OBJ):
 	$(extra_env) $(GO) build $(extra_flags) -o $@ .
 
 .PHONY: build
-build: clean $(OBJ)
+build: $(OBJ)
 
 .PHONY: unit
 unit:
