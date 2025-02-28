@@ -11,3 +11,4 @@ mappings:
     jstates:
       - "Done"
       - "Dev Complete"
+      - "Release Pending"

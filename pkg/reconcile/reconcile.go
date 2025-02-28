@@ -26,23 +26,26 @@ import (
 	"github.com/oceanc80/gh2jira/pkg/workflow"
 )
 
-type Outcome string
+const unassigned_issue string = "unassigned"
 
 type IssueStatus struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
+	Name     string `json:"name"`
+	Status   string `json:"status"`
+	Assignee string `json:"assignee"`
 }
 
 type PairResult struct {
-	Jira    IssueStatus `json:"jira"`
-	Git     IssueStatus `json:"github"`
-	Outcome Outcome     `json:"outcome"`
+	Jira IssueStatus `json:"jira"`
+	Git  IssueStatus `json:"github"`
 }
 
 type PairResults []PairResult
 type TypeResults struct {
-	Results PairResults `json:"results"`
+	Matches    PairResults `json:"matches"`
+	Mismatches PairResults `json:"mismatches"`
 }
+
+type Outcome string
 
 const (
 	OutcomeMatch    Outcome = "MATCH"
@@ -51,7 +54,8 @@ const (
 
 func Reconcile(ctx context.Context, jql string, jc *jira.Connection, gc *gh.Connection) (*TypeResults, error) {
 	results := &TypeResults{
-		Results: make(PairResults, 0),
+		Matches:    make(PairResults, 0),
+		Mismatches: make(PairResults, 0),
 	}
 
 	if jc == nil || gc == nil {
@@ -118,18 +122,24 @@ func Reconcile(ctx context.Context, jql string, jc *jira.Connection, gc *gh.Conn
 				if err != nil {
 					return nil, err
 				}
-				var match Outcome
-				if stateMatch {
-					match = OutcomeMatch
-				} else {
-					match = OutcomeMismatch
+				var ghAssignee string = unassigned_issue
+				if gi.GetAssignee() != nil {
+					ghAssignee = *gi.GetAssignee().Login
 				}
+				var jiAssignee string = unassigned_issue
+				if ji.Fields.Assignee != nil {
+					jiAssignee = ji.Fields.Assignee.DisplayName
+				}
+
 				pair := PairResult{
-					Jira:    IssueStatus{Name: ji.Key, Status: jstat},
-					Git:     IssueStatus{Name: fmt.Sprintf("%s/%d", project, gi.GetNumber()), Status: gi.GetState()},
-					Outcome: match,
+					Jira: IssueStatus{Name: ji.Key, Status: jstat, Assignee: jiAssignee},
+					Git:  IssueStatus{Name: fmt.Sprintf("%s/%d", project, gi.GetNumber()), Status: gi.GetState(), Assignee: ghAssignee},
 				}
-				results.Results = append(results.Results, pair)
+				if stateMatch {
+					results.Matches = append(results.Matches, pair)
+				} else {
+					results.Mismatches = append(results.Mismatches, pair)
+				}
 			}
 		}
 	}
