@@ -77,7 +77,7 @@ func TestConfig_Read(t *testing.T) {
 			},
 			audit: func(t *testing.T, err error, c *Config) {
 				require.NoError(t, err)
-				require.Equal(t, "operator-framework/operator-sdk", c.GithubProject)
+				require.Equal(t, "operator-framework/operator-lifecycle-manager", c.GithubProject)
 				require.Equal(t, defaultJiraProject, c.JiraProject)
 				require.Equal(t, "mock_github_token", c.Tokens.GithubToken)
 				require.Equal(t, "mock_jira_token", c.Tokens.JiraToken)

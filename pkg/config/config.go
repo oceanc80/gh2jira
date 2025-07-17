@@ -20,7 +20,7 @@ import (
 )
 
 const defaultJiraBaseURL string = "https://issues.redhat.com/"
-const defaultGithubProject string = "operator-framework/operator-sdk"
+const defaultGithubProject string = "operator-framework/operator-lifecycle-manager"
 const defaultJiraProject string = "OPECO"
 
 type Config struct {

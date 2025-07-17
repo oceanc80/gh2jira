@@ -32,7 +32,7 @@ func TestLister_GetOrg(t *testing.T) {
 	scenarios := []scenario{
 		{
 			name:    "valid project yields valid org",
-			project: "operator-framework/operator-sdk",
+			project: "operator-framework/operator-lifecycle-manager",
 			org:     "operator-framework",
 		},
 		{
@@ -68,8 +68,8 @@ func TestLister_GetRepo(t *testing.T) {
 	scenarios := []scenario{
 		{
 			name:    "valid project yields valid repo",
-			project: "operator-framework/operator-sdk",
-			repo:    "operator-sdk",
+			project: "operator-framework/operator-lifecycle-manager",
+			repo:    "operator-lifecycle-manager",
 		},
 		{
 			name:    "empty project yields empty repo",

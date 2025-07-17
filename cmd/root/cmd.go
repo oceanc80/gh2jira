@@ -51,7 +51,7 @@ func NewCmd() *cobra.Command {
 
 	// profile / project names must not have default values since they will always be used as if they were user-specified values, overriding all default values given
 	cmd.PersistentFlags().StringVar(&profileName, "profile-name", "", "profile name to use (implies profiles-file)")
-	cmd.PersistentFlags().StringVar(&ghProject, "github-project", "", "Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk")
+	cmd.PersistentFlags().StringVar(&ghProject, "github-project", "", "Github project domain to list if not using a profile, e.g.: operator-framework/operator-lifecycle-manager")
 	cmd.PersistentFlags().StringVar(&jProject, "jira-project", "", "Jira project if not using a profile, e.g.: OCPBUGS")
 	cmd.PersistentFlags().StringVar(&jUrl, "jira-base-url", defaultJiraBaseURL, "Jira base URL, e.g.: https://issues.redhat.com")
 

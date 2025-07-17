@@ -33,7 +33,7 @@ authTokens:
 2. Save to your TokenStore file under the key `authTokens.jira`
 
 ### Profiles
-gh2jira now supports Profiles, which are a mechanism to store associated GitHub domains - Jira projects for easy reference, as well as the TokenStore to be used by each (defaulting to `tokenstore.yaml` if unspecified).  By default this is `profiles.yaml` and follows this schema:
+Profiles are a mechanism to store associated GitHub domains - Jira projects for easy reference, as well as the TokenStore to be used by each (defaulting to `tokenstore.yaml` if unspecified).  By default this is `profiles.yaml` and follows this schema:
 
 ```yaml
 profiles:
@@ -70,9 +70,10 @@ Available Commands:
   github      Run a github subcommand
   help        Help about any command
   jira        Run a jira subcommand
+  reconcile   reconcile github and jira issues
 
 Flags:
-      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
+      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-lifecycle-manager
   -h, --help                    help for gh2jira
       --jira-base-url string    Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
       --jira-project string     Jira project if not using a profile, e.g.: OCPBUGS
@@ -111,7 +112,7 @@ The `--milestone` flag requires the milestone ID. So click on your Github
 Milestones tab and look at the ID in the URL, use that.
 
 ```
-$ ./gh2jira github list -h
+$ ./gh2jira github list --help
 List Github issues filtered by milestone, assignee, or label
 
 Usage:
@@ -124,7 +125,7 @@ Flags:
       --milestone string   the milestone ID from the url, not the display name
 
 Global Flags:
-      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
+      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-lifecycle-manager
       --jira-base-url string    Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
       --jira-project string     Jira project if not using a profile, e.g.: OCPBUGS
       --profile-name string     profile name to use (implies profiles-file)
@@ -140,7 +141,7 @@ The `list` subcommand will display all open jira issues of the specified project
 You can specify an additional JQL query string to be ANDed with the existing issue query.
 
 ```
-$ ./gh2jira jira list -h
+$ ./gh2jira jira list --help
 List open Jira issues filtered with optional additional JQL
 
 Usage:
@@ -151,7 +152,7 @@ Flags:
       --query string   Jira query (if provided, ANDed with project)
 
 Global Flags:
-      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
+      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-lifecycle-manager
       --jira-base-url string    Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
       --jira-project string     Jira project if not using a profile, e.g.: OCPBUGS
       --profile-name string     profile name to use (implies profiles-file)
@@ -181,7 +182,33 @@ Flags:
   -h, --help     help for clone
 
 Global Flags:
-      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-sdk
+      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-lifecycle-manager
+      --jira-base-url string    Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
+      --jira-project string     Jira project if not using a profile, e.g.: OCPBUGS
+      --profile-name string     profile name to use (implies profiles-file)
+      --profiles-file string    filename containing optional profile attributes (default "profiles.yaml")
+      --token-file string       file containing authentication tokens, if different than profile (default "tokenstore.yaml")
+```
+
+#### `reconcile` subcommand
+
+The `reconcile` subcommand will identify state mismatches between open jira and linked github issues, according to a state mapping maintained in a local `workflows.yaml` file.
+It generates a list of jira issues of the selected project with github issue links and reconciles the set of pairs.
+
+```
+$ ./gh2jira reconcile --help
+reconcile github and jira issues
+
+Usage:
+  gh2jira reconcile [flags]
+
+Flags:
+  -h, --help            help for reconcile
+  -o, --output string   output format for porcelain display (json or yaml) (default "json")
+      --porcelain       display output in an easy-to-parse format for scripts
+
+Global Flags:
+      --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-lifecycle-manager
       --jira-base-url string    Jira base URL, e.g.: https://issues.redhat.com (default "https://issues.redhat.com/")
       --jira-project string     Jira project if not using a profile, e.g.: OCPBUGS
       --profile-name string     profile name to use (implies profiles-file)

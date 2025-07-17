@@ -30,7 +30,7 @@ const unassigned_issue string = "unassigned"
 // Needs a --dryrun flag which will print out what jira issue it will create
 
 // gh2jira genconfig
-// gh2jira list --project operator-framework/operator-sdk [--milestone=] [--assignee=]
+// gh2jira list --project operator-framework/operator-lifecycle-manager [--milestone=] [--assignee=]
 // gh2jira copy GH# [--dry-run]
 
 func PrintGithubIssue(issue *github.Issue, oneline bool, color bool) {

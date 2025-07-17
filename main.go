@@ -31,7 +31,7 @@ import (
 // --no-color
 // --oneline
 // gh2jira genconfig
-// gh2jira list --project operator-framework/operator-sdk [--milestone=] [--assignee=]
+// gh2jira list --project operator-framework/operator-lifecycle-manager [--milestone=] [--assignee=]
 // gh2jira clone GH# [--dry-run]
 func main() {
 	cmd := root.NewCmd()
