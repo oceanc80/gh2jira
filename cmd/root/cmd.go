@@ -46,6 +46,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(jira.NewCmd())
 	cmd.AddCommand(clone.NewCmd())
 	cmd.AddCommand(NewReconcileCmd())
+	cmd.AddCommand(NewReportCmd())
 
 	cmd.PersistentFlags().StringVar(&tokensFile, "token-file", defaultTokensFile, "file containing authentication tokens, if different than profile")
 	cmd.PersistentFlags().StringVar(&profilesFile, "profiles-file", defaultProfilesFile, "filename containing optional profile attributes")
