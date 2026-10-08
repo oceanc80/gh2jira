@@ -89,6 +89,7 @@ Available Commands:
   github      Run a github subcommand
   help        Help about any command
   jira        Run a jira subcommand
+  link        Link existing GitHub issues or pull requests to an existing Jira item
   reconcile   reconcile github and jira issues
 
 Flags:
@@ -180,6 +181,42 @@ Global Flags:
 ```
 
 ### Domain-agnostic subcommands
+#### `link` subcommand
+
+Associate an existing Jira item with issue or pull request URLs across repositories:
+
+```sh
+./gh2jira link EXAMPLE-123 https://github.com/owner/repo/issues/42 https://github.com/owner/another-repo/pull/7 --dryrun
+./gh2jira link EXAMPLE-123 https://github.com/owner/repo/pull/7 --relationship implements
+```
+
+Use the existing Jira connection/profile flags. The Jira key selects the target;
+`--jira-project` and `--github-project` do not restrict the supplied key or URLs.
+The shared TokenStore validation still requires GitHub credentials, which this
+command does not use.
+`--relationship` accepts `relates to` (default), `implements`, `fixes`, or `depends on`,
+describing the Jira item's relationship to the GitHub URL. Quote multiword values.
+These are remote-link labels, not Jira workflow transitions or issue dependencies.
+
+The entire batch is validated before configuration is read. URLs must use exactly
+`https://github.com/owner/repo/issues/N` or `/pull/N`, with a positive number and no
+userinfo, port, query, fragment, percent encoding, or trailing path. Repository
+names are lowercased and numeric leading zeros are removed; duplicate URLs are
+processed once. Jira keys use uppercase project names and positive numbers.
+
+Only Jira remote links are read or added. No Jira issue is created, no descriptions
+or comments are copied, and no public GitHub resource is modified. GitHub is not
+contacted, so URL existence and repository visibility are not verified; supply
+existing public URLs. Jira links and command output contain the supplied URLs.
+`--dryrun` reads configuration and existing Jira links but performs no writes.
+
+Repeated runs retain matching links, including legacy links without a global ID;
+an empty legacy relationship counts as `relates to`. New links use deterministic,
+relationship-specific global IDs for Jira upserts. Different relationships remain
+separate. Unrelated links and Jira fields are preserved. Concurrent legacy-link
+creation may still race; a multi-URL write failure can leave earlier links added.
+The command returns an error and can be rerun safely.
+
 #### `clone` subcommand
 
 The `clone` subcommand will copy the given Github issue to your Jira instance.

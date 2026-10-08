@@ -103,6 +103,8 @@ func (oc *onpremClient) CreateIssue(ctx context.Context, issue *Issue) (*Issue, 
 
 func (oc *onpremClient) AddRemoteLink(ctx context.Context, issueID string, link *RemoteLink) error {
 	ol := &onpremise.RemoteLink{
+		GlobalID:     link.GlobalID,
+		Relationship: link.Relationship,
 		Object: &onpremise.RemoteLinkObject{
 			URL:   link.Object.URL,
 			Title: link.Object.Title,
@@ -135,7 +137,7 @@ func (oc *onpremClient) GetRemoteLinks(ctx context.Context, issueKey string) ([]
 					Title: rl.Object.Title,
 				}
 			}
-			result = append(result, RemoteLink{Object: obj})
+			result = append(result, RemoteLink{GlobalID: rl.GlobalID, Relationship: rl.Relationship, Object: obj})
 		}
 	}
 	return result, nil
