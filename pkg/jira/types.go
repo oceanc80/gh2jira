@@ -38,7 +38,9 @@ type User struct {
 }
 
 type RemoteLink struct {
-	Object *RemoteLinkObject
+	GlobalID     string
+	Relationship string
+	Object       *RemoteLinkObject
 }
 
 type RemoteLinkObject struct {

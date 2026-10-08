@@ -18,6 +18,7 @@ import (
 	"github.com/oceanc80/gh2jira/cmd/clone"
 	"github.com/oceanc80/gh2jira/cmd/github"
 	"github.com/oceanc80/gh2jira/cmd/jira"
+	"github.com/oceanc80/gh2jira/cmd/link"
 )
 
 const defaultTokensFile string = "tokenstore.yaml"
@@ -44,6 +45,7 @@ func NewCmd() *cobra.Command {
 	// add the child commands
 	cmd.AddCommand(github.NewCmd())
 	cmd.AddCommand(jira.NewCmd())
+	cmd.AddCommand(link.NewCmd())
 	cmd.AddCommand(clone.NewCmd())
 	cmd.AddCommand(NewReconcileCmd())
 
