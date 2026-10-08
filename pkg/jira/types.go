@@ -9,6 +9,7 @@ type Issue struct {
 type IssueFields struct {
 	Summary     string
 	Description string
+	Labels      []string
 	Type        IssueType
 	Project     Project
 	Priority    *Priority
@@ -38,7 +39,9 @@ type User struct {
 }
 
 type RemoteLink struct {
-	Object *RemoteLinkObject
+	GlobalID     string
+	Relationship string
+	Object       *RemoteLinkObject
 }
 
 type RemoteLinkObject struct {

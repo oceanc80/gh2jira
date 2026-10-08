@@ -15,6 +15,14 @@ type Connection struct {
 	baseUri    string
 }
 
+// WithJiraClient supplies an adapter, including synthetic clients for tests.
+func WithJiraClient(client JiraClient) ConnectionOption {
+	return func(c *Connection) error {
+		c.jiraClient = client
+		return nil
+	}
+}
+
 func WithBaseURI(u string) ConnectionOption {
 	return func(c *Connection) error {
 		c.baseUri = u

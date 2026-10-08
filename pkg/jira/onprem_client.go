@@ -3,12 +3,21 @@ package jira
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strconv"
 
 	onpremise "github.com/andygrunwald/go-jira/v2/onpremise"
 )
 
 type onpremClient struct {
 	client *onpremise.Client
+}
+
+// Pointer metadata distinguishes an empty, verified page from a malformed body.
+type dcSearchResult struct {
+	Issues  []onpremise.Issue `json:"issues"`
+	StartAt *int              `json:"startAt"`
+	Total   *int              `json:"total"`
 }
 
 func newOnpremClient(baseURL, token string) (*onpremClient, error) {
@@ -25,21 +34,38 @@ func (oc *onpremClient) SearchIssues(ctx context.Context, jql string) ([]Issue, 
 	lastIssue := 0
 
 	for {
-		opt := &onpremise.SearchOptions{
-			MaxResults: 1000,
-			StartAt:    lastIssue,
+		u := url.URL{Path: "rest/api/2/search"}
+		params := url.Values{}
+		params.Set("jql", jql)
+		params.Set("maxResults", "1000")
+		params.Set("startAt", strconv.Itoa(lastIssue))
+		params.Set("fields", "*navigable,labels")
+		u.RawQuery = params.Encode()
+		req, err := oc.client.NewRequest(ctx, "GET", u.String(), nil)
+		if err != nil {
+			return nil, fmt.Errorf("creating search request: %w", err)
 		}
-		issues, resp, err := oc.client.Issue.Search(ctx, jql, opt)
+		var page dcSearchResult
+		_, err = oc.client.Do(req, &page)
 		if err != nil {
 			return nil, fmt.Errorf("searching issues: %w", err)
 		}
+		if page.StartAt == nil || page.Total == nil || page.Issues == nil || *page.StartAt != lastIssue || *page.Total < lastIssue {
+			return nil, fmt.Errorf("incomplete Jira search pagination; refusing partial results")
+		}
 
-		total := resp.Total
-		for _, i := range issues {
+		total := *page.Total
+		if len(page.Issues) > total-lastIssue || (len(page.Issues) == 0 && lastIssue < total) {
+			return nil, fmt.Errorf("incomplete Jira search pagination; refusing partial results")
+		}
+		for _, i := range page.Issues {
+			if i.Fields == nil || i.Key == "" {
+				return nil, fmt.Errorf("incomplete Jira search issue; refusing partial results")
+			}
 			result = append(result, convertOnpremIssue(i))
 		}
 
-		lastIssue = resp.StartAt + len(issues)
+		lastIssue += len(page.Issues)
 		if lastIssue >= total {
 			break
 		}
@@ -57,6 +83,7 @@ func convertOnpremIssue(i onpremise.Issue) Issue {
 		issue.Fields = &IssueFields{
 			Summary:     i.Fields.Summary,
 			Description: i.Fields.Description,
+			Labels:      i.Fields.Labels,
 			Type:        IssueType{Name: i.Fields.Type.Name},
 			Project:     Project{Key: i.Fields.Project.Key},
 		}
@@ -81,6 +108,7 @@ func (oc *onpremClient) CreateIssue(ctx context.Context, issue *Issue) (*Issue, 
 		Fields: &onpremise.IssueFields{
 			Summary:     issue.Fields.Summary,
 			Description: issue.Fields.Description,
+			Labels:      issue.Fields.Labels,
 			Type: onpremise.IssueType{
 				Name: issue.Fields.Type.Name,
 			},
@@ -94,6 +122,9 @@ func (oc *onpremClient) CreateIssue(ctx context.Context, issue *Issue) (*Issue, 
 	if err != nil {
 		return nil, fmt.Errorf("creating issue: %w (response: %v)", err, resp)
 	}
+	if created == nil || (created.ID == "" && created.Key == "") {
+		return nil, fmt.Errorf("creating issue: Jira returned no issue ID or key")
+	}
 
 	return &Issue{
 		ID:  created.ID,
@@ -103,6 +134,8 @@ func (oc *onpremClient) CreateIssue(ctx context.Context, issue *Issue) (*Issue, 
 
 func (oc *onpremClient) AddRemoteLink(ctx context.Context, issueID string, link *RemoteLink) error {
 	ol := &onpremise.RemoteLink{
+		GlobalID:     link.GlobalID,
+		Relationship: link.Relationship,
 		Object: &onpremise.RemoteLinkObject{
 			URL:   link.Object.URL,
 			Title: link.Object.Title,
@@ -125,18 +158,19 @@ func (oc *onpremClient) GetRemoteLinks(ctx context.Context, issueKey string) ([]
 		defer resp.Body.Close()
 	}
 
-	var result []RemoteLink
-	if rlinks != nil {
-		for _, rl := range *rlinks {
-			var obj *RemoteLinkObject
-			if rl.Object != nil {
-				obj = &RemoteLinkObject{
-					URL:   rl.Object.URL,
-					Title: rl.Object.Title,
-				}
+	if rlinks == nil || *rlinks == nil {
+		return nil, fmt.Errorf("getting remote links: null payload; refusing unverified absence")
+	}
+	result := make([]RemoteLink, 0, len(*rlinks))
+	for _, rl := range *rlinks {
+		var obj *RemoteLinkObject
+		if rl.Object != nil {
+			obj = &RemoteLinkObject{
+				URL:   rl.Object.URL,
+				Title: rl.Object.Title,
 			}
-			result = append(result, RemoteLink{Object: obj})
 		}
+		result = append(result, RemoteLink{GlobalID: rl.GlobalID, Relationship: rl.Relationship, Object: obj})
 	}
 	return result, nil
 }

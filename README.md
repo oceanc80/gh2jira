@@ -186,7 +186,80 @@ The `clone` subcommand will copy the given Github issue to your Jira instance.
 *WARNING!* This will write to your Jira instance, consider using the `--dryrun`
 flag.
 
-The `--dryrun` flag will print out the Jira issue it would send to Jira.
+The `--dryrun` flag describes the intended action without writing anything.
+Action output does not print source titles or bodies.
+
+#### Repeatable cloning with `--if-missing`
+
+Cloning without `--if-missing` still creates a new Jira issue each time. Opt in
+to reuse with the same profile and destination flags as ordinary cloning:
+
+```sh
+./gh2jira clone --if-missing --profile-name my-profile 42 43
+./gh2jira clone --if-missing --github-project org/repo --jira-project DST --jira-issue-type Bug 42
+./gh2jira clone --if-missing --dryrun --profile-name my-profile 42
+```
+
+The entire batch of source IDs must be positive decimal integers. Invalid IDs
+are rejected before reading configuration, connecting, or creating any records.
+Other failures stop the command with an error; earlier successful sources in a
+batch are not rolled back.
+
+`--if-missing` searches the configured Jira project **and issue type**, including
+closed issues. It reuses exactly one issue with the source's canonical repository
+issue URL in eligible remote links or a matching `gh2jira-source-<SHA-256>` label.
+Links without relationship metadata remain eligible for legacy compatibility.
+Explicit `implements` and `fixes` relationships also count (case-insensitive,
+with surrounding whitespace ignored). Other explicit relationships, including
+`depends on`, do not establish clone identity. Every eligible link is examined:
+an explicit dependency link cannot hide a legacy match or resolve ambiguity
+between intentional version-specific issues. The creation marker remains
+authoritative for recovery, even if only a dependency link is present; recovery
+adds a separate unclassified source link and preserves the dependency link.
+Titles, summaries, and issue numbers alone are never identity. Repository and
+host are part of the URL identity; query strings, fragments, trailing slash,
+HTTP/HTTPS, and repository/host case are normalized. The marker hashes this URL
+for identity only; stored source URLs, remote-link titles, and checklist links
+retain original owner/repository case. Checklist expansion normalizes CRLF to
+LF and changes only the issue-number path segment, not numbers in repository
+names or subsequent references in checklist text.
+The marker contains no title, body, token, or raw source URL. It is added as part of
+Jira creation, on both Cloud and Data Center. If creation succeeds but linking
+fails, rerun with `--if-missing`: the marker identifies the existing issue and
+the command adds the missing source link. Preserve these labels for recovery.
+Existing relationships and issue contents are not overwritten. No GitHub
+comments, updates, or other public writes are performed.
+
+Multiple matching issues produce an ambiguity error listing their Jira keys,
+with no create or link writes for that source. This preserves intentional
+many-to-many and version-specific relationships. For a deliberate new
+version-specific Jira issue, omit `--if-missing`. To choose an existing issue,
+use an existing-record link command if available in your installation, or add
+the GitHub URL to that issue through Jira's web-link UI. This branch does not
+add a link command or automatically select a version-specific issue.
+
+**Performance and consistency limitations:** To find legacy records that only
+have remote links (no marker), each source scans all visible issues in the
+destination project/type and reads their remote links, including closed issues.
+This costs paginated search requests plus one remote-link request per issue,
+per source. Search and remote-link read errors fail closed. Missing search
+metadata, skipped/repeated DC offsets, missing/null issue fields, repeated Cloud
+pagination tokens, and null remote-link payloads also fail closed; an explicit
+empty remote-link array is valid absence. A later-page error discards earlier
+search pages rather than permitting mutation from partial results. Dry-run performs
+the same reads and reports create, reuse, or missing-link recovery, but performs
+no writes, even during recovery. Jira must allow labels on the create screen;
+creation errors are returned rather than retrying without the recovery marker.
+
+This is sequential best-effort repeatability, **not** a multi-process transaction
+or cross-machine exactly-once guarantee. Concurrent invocations can race between
+search and create. Jira search-index delay can hide newly created issues,
+including between sources in the same batch; wait for indexing before rerunning
+after a partial success. Permissions/access visibility can hide existing records
+or links, causing apparent absence. Removing a marker after a failed link or
+moving/renaming a source repository before recovery can also defeat detection.
+Ensure the account can see the full destination scope. No summary-based fallback
+is used.
 
 ```
 $ ./gh2jira clone --help
@@ -198,6 +271,7 @@ Usage:
 
 Flags:
       --dryrun   display what would happen without taking actually doing it
+      --if-missing   reuse a unique existing source relationship, or create if missing
   -h, --help     help for clone
 
 Global Flags:

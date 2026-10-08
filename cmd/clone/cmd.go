@@ -13,8 +13,11 @@
 package clone
 
 import (
+	"context"
+	"fmt"
 	"strconv"
 
+	"github.com/google/go-github/v60/github"
 	"github.com/spf13/cobra"
 
 	"github.com/oceanc80/gh2jira/pkg/config"
@@ -23,11 +26,66 @@ import (
 	"github.com/oceanc80/gh2jira/pkg/util"
 )
 
-var (
-	dryRun bool
-)
+type issueGetter interface {
+	GetIssue(int, ...gh.ListOption) (*github.Issue, error)
+}
+
+type issueCloner interface {
+	Clone(context.Context, *github.Issue, string, string, bool, ...jira.CloneOption) (*jira.Issue, error)
+}
+
+type loadDependencies func(*cobra.Command) (*config.Config, issueGetter, issueCloner, error)
+
+func connect(cmd *cobra.Command) (*config.Config, issueGetter, issueCloner, error) {
+	ff, err := util.NewFlagFeeder(cmd)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	cfg := config.NewConfig(ff)
+	if err := cfg.Read(); err != nil {
+		return nil, nil, nil, err
+	}
+	gc, err := gh.NewConnection(gh.WithContext(cmd.Context()), gh.WithToken(cfg.Tokens.GithubToken))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err := gc.Connect(); err != nil {
+		return nil, nil, nil, err
+	}
+	jc, err := jira.NewConnection(jira.WithBaseURI(cfg.JiraBaseUrl), jira.WithAuth(cfg.Tokens.JiraAuth))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err := jc.Connect(); err != nil {
+		return nil, nil, nil, err
+	}
+	return cfg, gc, jc, nil
+}
+
+func sourceIDs(args []string) ([]int, error) {
+	ids := make([]int, 0, len(args))
+	for _, arg := range args {
+		valid := arg != ""
+		for _, digit := range arg {
+			if digit < '0' || digit > '9' {
+				valid = false
+			}
+		}
+		id, err := strconv.Atoi(arg)
+		if !valid || err != nil || id <= 0 {
+			return nil, fmt.Errorf("invalid GitHub source ID %q: expected a positive decimal integer", arg)
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
 
 func NewCmd() *cobra.Command {
+	return newCmd(connect)
+}
+
+func newCmd(load loadDependencies) *cobra.Command {
+	var dryRun, ifMissing bool
 	cmd := &cobra.Command{
 		Use:   "clone <ISSUE_ID> [ISSUE_ID ...]",
 		Short: "Clone given Github issues to Jira",
@@ -36,49 +94,29 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ff, err := util.NewFlagFeeder(cmd)
+			ids, err := sourceIDs(args)
 			if err != nil {
 				return err
 			}
 
-			config := config.NewConfig(ff)
-			err = config.Read()
+			cfg, gc, jc, err := load(cmd)
 			if err != nil {
 				return err
 			}
 
-			gc, err := gh.NewConnection(gh.WithContext(cmd.Context()), gh.WithToken(config.Tokens.GithubToken))
-			if err != nil {
-				return err
+			options := []jira.CloneOption{jira.WithCloneWriter(cmd.OutOrStdout())}
+			if ifMissing {
+				options = append(options, jira.WithIfMissing())
 			}
-			err = gc.Connect()
-			if err != nil {
-				return err
-			}
-
-			jc, err := jira.NewConnection(
-				jira.WithBaseURI(config.JiraBaseUrl),
-				jira.WithAuth(config.Tokens.JiraAuth),
-			)
-			if err != nil {
-				return err
-			}
-
-			err = jc.Connect()
-			if err != nil {
-				return err
-			}
-
-			for _, id := range args {
-				issueId, _ := strconv.Atoi(id)
-				issue, err := gc.GetIssue(issueId, gh.WithProject(config.GithubProject))
+			for _, id := range ids {
+				issue, err := gc.GetIssue(id, gh.WithProject(cfg.GithubProject))
 				if err != nil {
 					return err
 				}
 
-				_, err = jc.Clone(cmd.Context(), issue, config.JiraProject, config.JiraIssueType, dryRun)
+				_, err = jc.Clone(cmd.Context(), issue, cfg.JiraProject, cfg.JiraIssueType, dryRun, options...)
 				if err != nil {
-					return nil
+					return err
 				}
 			}
 			return nil
@@ -86,6 +124,7 @@ WARNING! This will write to your jira instance. Use --dryrun to see what will ha
 	}
 
 	cmd.Flags().BoolVar(&dryRun, "dryrun", false, "display what would happen without taking actually doing it")
+	cmd.Flags().BoolVar(&ifMissing, "if-missing", false, "reuse a unique existing source relationship, or create and link if missing")
 
 	return cmd
 }
