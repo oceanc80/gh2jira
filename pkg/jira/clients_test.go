@@ -28,6 +28,58 @@ func syntheticAdapter(t *testing.T, mode, baseURL string) JiraClient {
 	return client
 }
 
+func TestCloneAdaptersRemoteLinkIdentityFields(t *testing.T) {
+	for _, mode := range []string{"cloud", "dc"} {
+		t.Run(mode, func(t *testing.T) {
+			var writes atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				if !strings.HasSuffix(r.URL.Path, "/issue/DST-1/remotelink") {
+					t.Errorf("unexpected path: %s", r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+				switch r.Method {
+				case http.MethodGet:
+					fmt.Fprint(w, `[{"globalId":"synthetic-source-id","relationship":"fixes","object":{"url":"https://github.com/org/repo/issues/42","title":"org/repo#42"}}]`)
+				case http.MethodPost:
+					writes.Add(1)
+					var body struct {
+						GlobalID     string `json:"globalId"`
+						Relationship string `json:"relationship"`
+					}
+					if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+						t.Error(err)
+					}
+					if body.GlobalID != "synthetic-source-id" || body.Relationship != "fixes" {
+						t.Errorf("remote-link metadata changed: %+v", body)
+					}
+					w.WriteHeader(http.StatusCreated)
+					fmt.Fprint(w, `{"id":1}`)
+				default:
+					t.Errorf("unexpected method: %s", r.Method)
+					w.WriteHeader(http.StatusMethodNotAllowed)
+				}
+			}))
+			defer server.Close()
+			client := syntheticAdapter(t, mode, server.URL)
+			links, err := client.GetRemoteLinks(context.Background(), "DST-1")
+			if err != nil || len(links) != 1 {
+				t.Fatalf("read remote links = %v, %v", links, err)
+			}
+			if links[0].GlobalID != "synthetic-source-id" || links[0].Relationship != "fixes" {
+				t.Fatalf("read lost remote-link metadata: %+v", links[0])
+			}
+			if err := client.AddRemoteLink(context.Background(), "DST-1", &links[0]); err != nil {
+				t.Fatal(err)
+			}
+			if writes.Load() != 1 {
+				t.Fatalf("writes = %d, want 1", writes.Load())
+			}
+		})
+	}
+}
+
 func TestAdaptersLabelsCreateAndSearch(t *testing.T) {
 	for _, mode := range []string{"cloud", "dc"} {
 		t.Run(mode, func(t *testing.T) {

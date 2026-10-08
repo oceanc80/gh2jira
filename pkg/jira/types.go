@@ -39,8 +39,9 @@ type User struct {
 }
 
 type RemoteLink struct {
+	GlobalID     string
+	Relationship string
 	Object       *RemoteLinkObject
-	Relationship string `json:"relationship,omitempty"`
 }
 
 type RemoteLinkObject struct {

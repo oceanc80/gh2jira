@@ -174,6 +174,7 @@ func (cc *cloudClient) CreateIssue(ctx context.Context, issue *Issue) (*Issue, e
 
 func (cc *cloudClient) AddRemoteLink(ctx context.Context, issueID string, link *RemoteLink) error {
 	cl := &cloud.RemoteLink{
+		GlobalID:     link.GlobalID,
 		Relationship: link.Relationship,
 		Object: &cloud.RemoteLinkObject{
 			URL:   link.Object.URL,
@@ -209,7 +210,7 @@ func (cc *cloudClient) GetRemoteLinks(ctx context.Context, issueKey string) ([]R
 				Title: rl.Object.Title,
 			}
 		}
-		result = append(result, RemoteLink{Object: obj, Relationship: rl.Relationship})
+		result = append(result, RemoteLink{GlobalID: rl.GlobalID, Relationship: rl.Relationship, Object: obj})
 	}
 	return result, nil
 }
