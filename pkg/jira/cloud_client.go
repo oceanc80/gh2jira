@@ -28,18 +28,19 @@ func newCloudClient(baseURL, email, apiToken string) (*cloudClient, error) {
 type v3SearchResult struct {
 	Issues        []v3Issue `json:"issues"`
 	NextPageToken string    `json:"nextPageToken,omitempty"`
-	IsLast        bool      `json:"isLast"`
+	IsLast        *bool     `json:"isLast"`
 }
 
 type v3Issue struct {
-	ID     string        `json:"id"`
-	Key    string        `json:"key"`
-	Fields v3IssueFields `json:"fields"`
+	ID     string         `json:"id"`
+	Key    string         `json:"key"`
+	Fields *v3IssueFields `json:"fields"`
 }
 
 type v3IssueFields struct {
 	Summary     string     `json:"summary"`
 	Description any        `json:"description"`
+	Labels      []string   `json:"labels"`
 	Type        v3Named    `json:"issuetype"`
 	Project     v3Keyed    `json:"project"`
 	Priority    *v3Named   `json:"priority"`
@@ -63,13 +64,14 @@ type v3UserRef struct {
 func (cc *cloudClient) SearchIssues(ctx context.Context, jql string) ([]Issue, error) {
 	var result []Issue
 	var nextPageToken string
+	seenTokens := make(map[string]bool)
 
 	for {
 		u := url.URL{Path: "rest/api/3/search/jql"}
 		params := url.Values{}
 		params.Set("jql", jql)
 		params.Set("maxResults", strconv.Itoa(1000))
-		params.Set("fields", "*navigable")
+		params.Set("fields", "*navigable,labels")
 		if nextPageToken != "" {
 			params.Set("nextPageToken", nextPageToken)
 		}
@@ -86,13 +88,23 @@ func (cc *cloudClient) SearchIssues(ctx context.Context, jql string) ([]Issue, e
 			return nil, fmt.Errorf("executing search: %w", err)
 		}
 
+		if sr.Issues == nil || sr.IsLast == nil {
+			return nil, fmt.Errorf("incomplete Jira search pagination; refusing partial results")
+		}
 		for _, i := range sr.Issues {
+			if i.Fields == nil || i.Key == "" {
+				return nil, fmt.Errorf("incomplete Jira search issue; refusing partial results")
+			}
 			result = append(result, convertV3Issue(i))
 		}
 
-		if sr.IsLast || sr.NextPageToken == "" {
+		if *sr.IsLast {
 			break
 		}
+		if sr.NextPageToken == "" || seenTokens[sr.NextPageToken] {
+			return nil, fmt.Errorf("incomplete Jira search pagination; refusing partial results")
+		}
+		seenTokens[sr.NextPageToken] = true
 		nextPageToken = sr.NextPageToken
 	}
 
@@ -100,11 +112,15 @@ func (cc *cloudClient) SearchIssues(ctx context.Context, jql string) ([]Issue, e
 }
 
 func convertV3Issue(i v3Issue) Issue {
+	if i.Fields == nil {
+		return Issue{ID: i.ID, Key: i.Key}
+	}
 	issue := Issue{
 		ID:  i.ID,
 		Key: i.Key,
 		Fields: &IssueFields{
 			Summary: i.Fields.Summary,
+			Labels:  i.Fields.Labels,
 			Type:    IssueType{Name: i.Fields.Type.Name},
 			Project: Project{Key: i.Fields.Project.Key},
 		},
@@ -132,6 +148,7 @@ func (cc *cloudClient) CreateIssue(ctx context.Context, issue *Issue) (*Issue, e
 		Fields: &cloud.IssueFields{
 			Summary:     issue.Fields.Summary,
 			Description: issue.Fields.Description,
+			Labels:      issue.Fields.Labels,
 			Type: cloud.IssueType{
 				Name: issue.Fields.Type.Name,
 			},
@@ -145,6 +162,9 @@ func (cc *cloudClient) CreateIssue(ctx context.Context, issue *Issue) (*Issue, e
 	if err != nil {
 		return nil, fmt.Errorf("creating issue: %w (response: %v)", err, resp)
 	}
+	if created == nil || (created.ID == "" && created.Key == "") {
+		return nil, fmt.Errorf("creating issue: Jira returned no issue ID or key")
+	}
 
 	return &Issue{
 		ID:  created.ID,
@@ -154,6 +174,7 @@ func (cc *cloudClient) CreateIssue(ctx context.Context, issue *Issue) (*Issue, e
 
 func (cc *cloudClient) AddRemoteLink(ctx context.Context, issueID string, link *RemoteLink) error {
 	cl := &cloud.RemoteLink{
+		Relationship: link.Relationship,
 		Object: &cloud.RemoteLinkObject{
 			URL:   link.Object.URL,
 			Title: link.Object.Title,
@@ -176,18 +197,19 @@ func (cc *cloudClient) GetRemoteLinks(ctx context.Context, issueKey string) ([]R
 		defer resp.Body.Close()
 	}
 
-	var result []RemoteLink
-	if rlinks != nil {
-		for _, rl := range *rlinks {
-			var obj *RemoteLinkObject
-			if rl.Object != nil {
-				obj = &RemoteLinkObject{
-					URL:   rl.Object.URL,
-					Title: rl.Object.Title,
-				}
+	if rlinks == nil || *rlinks == nil {
+		return nil, fmt.Errorf("getting remote links: null payload; refusing unverified absence")
+	}
+	result := make([]RemoteLink, 0, len(*rlinks))
+	for _, rl := range *rlinks {
+		var obj *RemoteLinkObject
+		if rl.Object != nil {
+			obj = &RemoteLinkObject{
+				URL:   rl.Object.URL,
+				Title: rl.Object.Title,
 			}
-			result = append(result, RemoteLink{Object: obj})
 		}
+		result = append(result, RemoteLink{Object: obj, Relationship: rl.Relationship})
 	}
 	return result, nil
 }
