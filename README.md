@@ -90,6 +90,7 @@ Available Commands:
   help        Help about any command
   jira        Run a jira subcommand
   reconcile   reconcile github and jira issues
+  report      Report read-only GitHub/Jira correlations across repositories
 
 Flags:
       --github-project string   Github project domain to list if not using a profile, e.g.: operator-framework/operator-lifecycle-manager
@@ -234,6 +235,62 @@ Global Flags:
       --profiles-file string    filename containing optional profile attributes (default "profiles.yaml")
       --token-file string       file containing authentication tokens, if different than profile (default "tokenstore.yaml")
 ```
+
+#### `report` subcommand
+
+`report` reads Jira issues and their remote links, then looks up supported GitHub
+issues and pull requests across repositories through the official GitHub API.
+It never creates links or changes Jira/GitHub states. It includes closed Jira
+items, so an open or reopened upstream item linked to a closed Jira item remains
+visible. Jira and GitHub states are independent: closed upstream work with open
+downstream/version-specific work is normal, and the report does not classify
+matches or mismatches or load `workflows.yaml`.
+
+```sh
+./gh2jira report --jira-project OCPBUGS --output json
+./gh2jira report --jira-project OCPBUGS --query 'labels = upstream OR labels = backport' --output yaml
+./gh2jira report --jira-project OCPBUGS --output table
+```
+
+A Jira project must come from `--jira-project` or the selected `--profile-name`.
+An explicit project flag overrides the profile project. The general configuration's
+default project is never used as a report scope. `--query` is an optional JQL **filter expression**, safely
+parenthesized and ANDed with the project. It cannot contain `ORDER BY`, comments,
+unbalanced quotes/parentheses, or statement separators. Format and raw scope/filter checks
+run before configuration files are read. A profile's effective project is then
+validated before readers or network clients are invoked. A filter can
+select fewer statuses; the default scope has no status restriction.
+
+`--output` / `-o` accepts `json` (default), `yaml`, or `table`. Machine formats
+contain an array sorted by Jira key/status, link status, repository, and issue
+number. Each row has separate `jira.key` / `jira.status` and, for a supported
+link, `github.repository`, `type` (`issue` or `pull_request`), `number`, canonical
+`url`, `state`, and an explicit boolean `merged` for PRs only. Issue URLs that
+resolve to PRs are reported as PRs. Repeated case/number/query/fragment aliases
+within one Jira item produce one correlation. Source lookups are cached across
+the report, while distinct Jira items for different downstream versions remain
+separate rows.
+
+`link_status` is `linked`, `no_supported_github_links`, or
+`malformed_github_reference`. Malformed GitHub-looking references have a `problem`
+explaining the rejection; raw malformed URLs are omitted to avoid exposing
+embedded credentials. An item containing only malformed references also has a
+`no_supported_github_links` row. Unrelated remote links and nil link objects are
+ignored. Supported URLs require HTTPS, the exact `github.com` host without
+userinfo or port, and `/owner/repository/issues/positive-ID` or
+`/owner/repository/pull/positive-ID` (an optional trailing slash, query, and
+fragment are normalized). Encoded paths and extra path segments are rejected.
+Arbitrary remote URLs are never fetched with authentication.
+
+Any search, remote-link, GitHub lookup, or output-write failure returns an error;
+failed lookups are not presented as missing links or successful empty results.
+An empty successful scope is `[]` in JSON/YAML or a header-only table. Missing
+Jira status fields appear as an empty string.
+
+**Keep report output private.** It omits Jira summaries, descriptions, customer
+names, remote-link titles, and attachment contents, but keys, statuses, repository
+names, and source URLs can still identify private work. Relationship metadata,
+version fields, build automation, and backport tracking are outside this report.
 
 [actions-img]: https://github.com/oceanc80/gh2jira/workflows/unit/badge.svg
 [coveralls-img]: https://coveralls.io/repos/github/oceanc80/gh2jira/badge.svg?branch=main
